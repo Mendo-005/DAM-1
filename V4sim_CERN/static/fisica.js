@@ -67,9 +67,6 @@ function createSubparticles(position) {
         if (particleData.name === "Quark Up") upQuarks++;
         if (particleData.name === "Quark Down") downQuarks++;
         if (particleData.name === "Bosón Z") bosonZ++; // Aseguramos que solo haya 1 bosón Z
-        console.log("upQuarks:",upQuarks)
-        console.log("downQuarks:",downQuarks)
-        console.log("bosonZ:",bosonZ)
 
         // Crear subpartícula con energía formateada
         const subparticle = {
