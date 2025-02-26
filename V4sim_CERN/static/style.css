@@ -1,0 +1,133 @@
+/* Estilo general del body */
+body {
+    font-family: 'Roboto', sans-serif;
+    text-align: center;
+    background-color: #1a1a1a; /* Fondo oscuro */
+    background-image: url('https://www.w3schools.com/w3images/galaxy.jpg'); /* Imagen de galaxia de fondo */
+    background-size: cover; /* Ajusta la imagen al tamaño de la pantalla */
+    background-position: center;
+    margin: 0;
+    padding: 0;
+    color: white;
+    overflow: hidden;
+}
+
+/* Título principal */
+h1 {
+    font-size: 40px;
+    color: #00ff99;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.7), 0 0 30px rgba(255, 255, 255, 0.6);
+    margin-top: 30px;
+    text-transform: uppercase;
+}
+
+/* Contenedor de botones */
+.button-container {
+    margin-top: 20px;
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+/* Estilo de los botones */
+button {
+    padding: 12px 25px;
+    font-size: 18px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border: 2px solid #00ff99;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 4px 6px rgba(0, 255, 255, 0.2);
+}
+
+/* Efectos de los botones */
+button:hover {
+    background-color: #00ff99;
+    color: #1a1a1a;
+    box-shadow: 0 8px 15px rgba(0, 255, 255, 0.5);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* Contenedor de la simulación y la información de las partículas */
+.simulation-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding: 0 20px;
+}
+
+/* Estilo del canvas para la simulación */
+.visualization {
+    width: 1100;
+    height: 600px;
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
+}
+
+/* Contenedor de la información de las partículas */
+.particle-info {
+    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.1); /* Fondo translúcido */
+    border: 1px solid #00ff99;
+    border-radius: 8px;
+    width: 35%;
+    box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
+}
+
+/* Estilo de la lista de partículas */
+#particleList {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#particleList li {
+    font-size: 18px;
+    margin-bottom: 10px;
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 255, 255, 0.2);
+}
+
+/* Estilo de las partículas en la lista */
+#particleList li:nth-child(odd) {
+    background-color: rgba(0, 255, 255, 0.1);
+}
+
+#particleList li:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Estilos del fondo con galaxia */
+@keyframes starfield {
+    0% { transform: translateY(0) rotate(0deg); }
+    100% { transform: translateY(-100%); }
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('https://www.w3schools.com/w3images/stars.jpg') repeat;
+    opacity: 0.5;
+    animation: starfield 50s infinite linear;
+    z-index: -1;
+}
+
+body {
+    position: relative;
+}
+#simulation-container {
+    z-index: 2;
+}

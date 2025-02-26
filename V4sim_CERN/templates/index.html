@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador LHC</title>
+    <!-- Enlace a archivo CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Simulador de Colisiones de Partículas (LHC)</h1>
+    
+    <!-- Contenedor de los botones -->
+    <div class="button-container">
+        <button id="startBtn" aria-label="Iniciar simulación">Start</button>
+        <button id="pauseBtn" aria-label="Pausar simulación">Pause</button>
+        <button id="restartBtn" aria-label="Reiniciar simulación">Restart</button>
+    </div>
+
+    <!-- Contenedor para la simulación y la información de las partículas -->
+    <div class="simulation-container">
+        <!-- Canvas donde se visualizará la simulación -->
+        <div id="visualization" class="visualization"></div>
+        
+        <!-- Contenedor para mostrar la información de las partículas -->
+        <div id="particleInfo" class="particle-info">
+            <h2>Información de las Partículas</h2>
+            <ul id="particleList">
+                <!-- Aquí se añadirá la información de las partículas dinámicamente -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Formulario para modificar características de los protones -->
+    <div id="protonConfig">
+        <h2>Configuración de Protones</h2>
+        <label for="protonMass">Masa (GeV/c²):</label>
+        <input type="number" id="protonMass" value="0.938">
+        
+        <label for="protonVelocity">Velocidad (% de c):</label>
+        <input type="number" id="protonVelocity" value="0.99">
+        
+        <label for="protonCharge">Carga (e):</label>
+        <input type="number" id="protonCharge" value="1">
+        
+        <button id="applyConfig">Aplicar Configuración</button>
+        <button id="resetConfig" aria-label="Reiniciar configuración">Reiniciar Configuración</button>
+    </div>
+
+    <!-- Cargar Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/renderers/CSS2DRenderer.js"></script>
+    
+    <!-- Cargar los scripts en el orden correcto -->
+    <script src="{{ url_for('static', filename='escena.js') }}"></script>
+    <script src="{{ url_for('static', filename='animate.js') }}"></script>
+    <script src="{{ url_for('static', filename='fisica.js') }}"></script>
+    <script src="{{ url_for('static', filename='control.js') }}"></script>
+    <script src="{{ url_for('static', filename='dom.js') }}"></script>
+    <script src="{{ url_for('static', filename='background.js') }}"></script>
+    
+
+    <!-- Script principal de simulación (solo una vez) -->
+    <script src="{{ url_for('static', filename='render.js') }}"></script></body>
+</html>
+

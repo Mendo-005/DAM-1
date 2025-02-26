@@ -1,0 +1,364 @@
+let scene, camera, renderer;
+let particle1, particle2;
+let velocity1 = new THREE.Vector3(0.05, 0, 0);  // Movimiento en sentido contrario
+let velocity2 = new THREE.Vector3(-0.05, 0, 0);
+
+// Cargar la textura
+const textureLoader = new THREE.TextureLoader();
+const particleTexture = textureLoader.load('/static/particle_texture.png');
+ // Reemplaza con la ruta de tu textura
+
+// Crear la escena, cámara y renderizador
+function init() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, 1000 / 800, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(1100, 600); // Reducir tamaño del canvas
+    document.getElementById('visualization').appendChild(renderer.domElement);
+
+    // Ajustar la relación de aspecto correctamente
+    camera.aspect = 1000 / 400;
+    camera.updateProjectionMatrix();
+
+    // Crear las partículas con material que tenga textura
+    const geometry = new THREE.SphereGeometry(1, 32, 32);
+    const material1 = new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        map: particleTexture, // Asignar la textura
+        opacity: 1         // Ajustar la opacidad
+    });
+    const material2 = new THREE.MeshStandardMaterial({
+        color: 0x0000ff,
+        map: particleTexture,
+        opacity: 1
+    });
+
+    particle1 = new THREE.Mesh(geometry, material1);
+    particle2 = new THREE.Mesh(geometry, material2);
+
+    // Posicionarlas en direcciones contrarias
+    particle1.position.x = -5;
+    particle2.position.x = 5;
+
+    // Añadir las partículas a la escena
+    scene.add(particle1);
+    scene.add(particle2);
+
+    // Crear una luz para iluminar las partículas
+    const light = new THREE.PointLight(0xffffff, 1, 100);
+    light.position.set(10, 10, 10);
+    scene.add(light);
+
+    camera.position.z = 15;
+}
+
+// Función para actualizar la simulación y detectar colisiones
+function animate() {
+    requestAnimationFrame(animate);
+
+    // Mover las partículas
+    particle1.position.add(velocity1);
+    particle2.position.add(velocity2);
+
+    // Comprobar si las partículas colisionan
+    if (particle1.position.distanceTo(particle2.position) < 1) {
+        // Simular la división en partículas constituyentes
+        createSubparticles(particle1.position);
+        createSubparticles(particle2.position);
+        
+        // Reiniciar las posiciones de las partículas
+        particle1.position.x = -5;
+        particle2.position.x = 5;
+    }
+
+    renderer.render(scene, camera);
+}
+
+
+let subparticles = []; // Global para almacenar las partículas
+
+// Constantes físicas
+const c = 299792458; // Velocidad de la luz en m/s
+const mass = 0.938; // Masa en GeV/c^2
+
+// Función para calcular la energía total de una partícula
+function calculateTotalEnergy(mass, velocity) {
+    const gamma = 1 / Math.sqrt(1 - Math.pow(velocity / c, 2)); // Factor de Lorentz
+    const Energy = gamma * mass * Math.pow(c, 2); // E = γmc^2
+    return Energy;
+}
+
+function createSubparticles(position, mass, velocity) {
+    const totalEnergy = calculateTotalEnergy(mass, velocity); // Energía relativista total
+    const possibleParticles = [
+        { name: "Quark Up", color: 0xff8c00, minEnergy: 0.1 },
+        { name: "Quark Down", color: 0x00cc99, minEnergy: 0.1 },
+        { name: "Gluon", color: 0xcccccc, minEnergy: 2 },
+        { name: "Fotón", color: 0xffdd44, minEnergy: 5 },
+        { name: "Bosón Z", color: 0xcc00cc, minEnergy: 91 }
+    ];
+
+    let subparticlesCreated = [];
+    let remainingEnergy = totalEnergy;
+    let numSubparticles = Math.floor(Math.random() * 4) + 2; // Entre 2 y 5 subpartículas
+    
+    for (let i = 0; i < numSubparticles; i++) {
+        let particleData = possibleParticles[Math.floor(Math.random() * possibleParticles.length)];
+
+        // Asegurar que la partícula tenga al menos su energía mínima
+        let maxPossibleEnergy = remainingEnergy / (numSubparticles - i); // Corregido el cálculo
+        let energy = Math.random() * Math.min(maxPossibleEnergy, particleData.minEnergy); 
+        
+        
+        // Evitar que la energía restante sea negativa
+        remainingEnergy -= energy;
+        if (remainingEnergy < 0) break;
+
+        // Crear subpartícula con energía formateada
+        const subparticle = {
+            name: particleData.name,
+            color: particleData.color,
+            energy: parseFloat(energy.toFixed(2)) // Redondear a 2 decimales
+        };
+
+        // Crear representación visual en Three.js
+        const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const material = new THREE.MeshStandardMaterial({ color: particleData.color, opacity: 0.8 });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(position.x, position.y, position.z);
+        scene.add(mesh);
+        
+        // Asignar velocidad aleatoria
+        const randomVelocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.2,
+            (Math.random() - 0.5) * 0.2,
+            (Math.random() - 0.5) * 0.2
+        );
+        animateSubparticle(mesh, randomVelocity);
+
+        subparticlesCreated.push(subparticle);
+    }
+
+    // Asegurar que se actualiza el array global correctamente
+    if (subparticlesCreated.length > 0) {
+        subparticles.push(...subparticlesCreated); // En lugar de `concat`
+        console.log("Subpartículas generadas:", subparticles);
+        updateParticleInfo(subparticles); // Asegurar que la función está recibiendo los datos correctos
+    } else {
+        console.warn("No se generaron subpartículas.");
+    }
+}
+
+
+// Función para agregar información de partículas al HTML
+function updateParticleInfo(subparticles) {
+    const particleList = document.getElementById('particleList');
+    particleList.innerHTML = '';
+    
+    subparticles.forEach(particle => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${particle.name} - Energía: ${particle.energy.toFixed(2)} GeV`;
+        listItem.style.backgroundColor = `#${particle.color.toString(16).padStart(6, '0')}`; // Aplicar color de fondo
+        listItem.style.color = '#000'; // Texto oscuro para mejorar contraste
+        listItem.style.padding = '5px';
+        listItem.style.borderRadius = '5px';
+        particleList.appendChild(listItem);
+    });
+}
+
+
+// Función para animar las subpartículas
+function animateSubparticle(subparticle, velocity,) {
+    function move() {
+        subparticle.position.add(velocity);
+        requestAnimationFrame(move);
+    }
+    move();
+}
+
+
+// Variables de control
+let isRunning = false;
+let animationId;
+
+// Modificar la función animate para que pueda pausarse
+function animate() {
+    if (!isRunning) return;
+    
+    animationId = requestAnimationFrame(animate);
+
+    // Mover las partículas
+    particle1.position.add(velocity1);
+    particle2.position.add(velocity2);
+
+    // Comprobar colisión
+    if (particle1.position.distanceTo(particle2.position) < 2) {
+        createSubparticles(particle1.position);
+        createSubparticles(particle2.position);
+        particle1.position.x = -5;
+        particle2.position.x = 5;
+    }
+    
+    renderer.render(scene, camera);
+}
+
+
+// Funciones para los botones
+function startSimulation() {
+    if (!isRunning) {
+        isRunning = true;
+        animate();
+    }
+}
+
+function pauseSimulation() {
+    isRunning = false;
+    cancelAnimationFrame(animationId);
+}
+
+function restartSimulation() {
+    pauseSimulation();
+    particle1.position.set(-5, 0, 0);
+    particle2.position.set(5, 0, 0);
+    collisionOccurred = false; // Permitir nueva colisión
+    subparticles = []; // Limpiar las partículas
+;
+
+     // Limpiar la lista de partículas en el HTML
+     const particleList = document.getElementById('particleList');
+     particleList.innerHTML = '';
+
+    // Eliminar partículas visuales de Three.js
+    for (let i = scene.children.length - 1; i >= 0; i--) {
+        if (scene.children[i] instanceof THREE.Mesh && scene.children[i] !== particle1 && scene.children[i] !== particle2) {
+            scene.remove(scene.children[i]);
+        }
+    }
+}
+
+
+// Agregar event listeners a los botones
+document.getElementById('startBtn').addEventListener('click', startSimulation);
+document.getElementById('pauseBtn').addEventListener('click', pauseSimulation);
+document.getElementById('restartBtn').addEventListener('click', restartSimulation);
+
+// Configuración de partículas
+document.getElementById('applyConfig').addEventListener('click', function() {
+    let protonMass = parseFloat(document.getElementById('protonMass').value);
+    let protonVelocity = parseFloat(document.getElementById('protonVelocity').value);
+    let protonCharge = parseInt(document.getElementById('protonCharge').value);
+
+    // Aplica la configuración a las partículas
+    velocity1.set(protonVelocity / 100, 0, 0);
+    velocity2.set(-protonVelocity / 100, 0, 0);
+});
+
+// Función para reiniciar la configuración de los protones
+function resetProtonConfig() {
+    // Reestablecer valores en los campos de entrada HTML a sus valores predeterminados
+    document.getElementById('protonMass').value = 0.938;  // Masa en GeV/c² (equivalente a un protón)
+    document.getElementById('protonVelocity').value = 0.99;  // Velocidad predeterminada (99% de la velocidad de la luz)
+    document.getElementById('protonCharge').value = 1;     // Carga del protón (en unidades de la carga elemental)
+
+    // Aplicar los valores predeterminados a las partículas, asegurándose de que la velocidad esté en términos de la luz
+    const c = 299792458; // Velocidad de la luz en m/s
+    const velocityMagnitude = 0.99 * c; // 99% de la velocidad de la luz
+    
+    // Asignar velocidades a las partículas (usando 99% de la velocidad de la luz en dirección x y -x para dos partículas)
+    velocity1.set(velocityMagnitude, 0, 0);  // Partícula 1, 99% de la velocidad de la luz en el eje x
+    velocity2.set(-velocityMagnitude, 0, 0); // Partícula 2, 99% de la velocidad de la luz en el eje -x
+}
+
+
+
+// Agregar un listener para el botón de reiniciar configuración
+document.getElementById('resetConfig').addEventListener('click', resetProtonConfig);
+
+// Variables de control
+
+let collisionOccurred = false; // Nueva variable para evitar colisiones en bucle
+
+// Esperar a que el DOM esté listo
+window.onload = function() {
+    document.getElementById('startBtn').addEventListener('click', startSimulation);
+    document.getElementById('pauseBtn').addEventListener('click', pauseSimulation);
+    document.getElementById('restartBtn').addEventListener('click', restartSimulation);
+    init(); // Asegurar que la escena se inicializa correctamente
+};
+
+// Modificar la función animate para que pueda pausarse
+function animate() {
+    if (!isRunning) return;
+    
+    animationId = requestAnimationFrame(animate);
+
+    // Mover las partículas solo si no ha ocurrido una colisión
+    if (!collisionOccurred) {
+        particle1.position.add(velocity1);
+        particle2.position.add(velocity2);
+    }
+
+    // Comprobar colisión
+    if (!collisionOccurred && particle1.position.distanceTo(particle2.position) < 2) {
+        collisionOccurred = true;
+        createSubparticles(particle1.position);
+        createSubparticles(particle2.position);
+    }
+    
+    renderer.render(scene, camera);
+}
+
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
+document.body.appendChild(canvas);
+canvas.style.position = 'fixed';
+canvas.style.top = '0';
+canvas.style.left = '0';
+canvas.style.zIndex = '-1';
+canvas.style.width = '100vw';
+canvas.style.height = '100vh';
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const stars = [];
+for (let i = 0; i < 150; i++) {
+    stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 2,
+        speed: Math.random() * 0.5 + 0.2
+    });
+}
+
+//Animacion de fondo
+function animateBackground() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    stars.forEach(star => {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        star.y += star.speed;
+        if (star.y > canvas.height) star.y = 0;
+    });
+    
+    requestAnimationFrame(animateBackground);
+}
+animateBackground();
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+// Crear un nuevo renderer para las etiquetas
+const container = document.getElementById('scene-container');
+container.appendChild(labelRenderer.domElement);
+
+
+// Inicializar la simulación
+init();
+animate();
