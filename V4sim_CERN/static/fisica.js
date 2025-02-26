@@ -18,7 +18,6 @@ let protonVelocity = calcularMagnitud(velocity1) * c;
 
 // Función para calcular la energía total de una partícula
 function ColisionEnergy(mass) {
-    console.log(protonVelocity)
     const gamma = 1 / Math.sqrt(1 - Math.pow(protonVelocity / c, 2)); // Factor de Lorentz
     const Energy = (gamma * mass * Math.pow(c, 2))/10**12; // E = γmc^2
     return Energy;
@@ -35,7 +34,7 @@ function createSubparticles(position) {
         { name: "Fotón", color: 0xffdd44, minEnergy: 5*1000 },
         { name: "Bosón Z", color: 0xcc00cc, minEnergy: 91*1000 }
     ];
-    console.log(totalEnergy)
+    console.log('Energía Total',totalEnergy)
     
     let subparticlesCreated = [];
     let remainingEnergy = totalEnergy;
