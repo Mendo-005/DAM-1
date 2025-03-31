@@ -5,7 +5,9 @@ let addMode = false;
 let canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
 
-const labelRadius = 35;  // Tamaño de las etiquetas (radio fijo)
+const labelRadius = 45;  // Tamaño de las etiquetas (radio fijo)
+
+let originalImage = new Image();
 
 function uploadImage() {
     let input = document.getElementById("imageInput");
@@ -24,17 +26,15 @@ function uploadImage() {
     .then(response => response.json())
     .then(data => {
         if (data.image_url) {
-            let imgURL = data.image_url;
-            let img = new Image();
-            img.onload = function() {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
+            originalImage.src = data.image_url;
+            originalImage.onload = function() {
+                canvas.width = originalImage.width;
+                canvas.height = originalImage.height;
+                ctx.drawImage(originalImage, 0, 0);
                 currentImage = input.files[0].name;
-                labels = data.labels || [];  // Cargar etiquetas generadas por IA
-                drawLabels();  // Llamar a la función de dibujo
+                labels = data.labels || [];
+                drawLabels();
             };
-            img.src = imgURL;
         }
     })
     .catch(error => console.error("Error:", error));
@@ -42,30 +42,26 @@ function uploadImage() {
 
 function drawLabels() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    let img = new Image();
-    img.onload = function() {
-        ctx.drawImage(img, 0, 0);
-        // Dibujar etiquetas generadas por la IA y las añadidas
-        labels.forEach((label, index) => {
-            let [x_center, y_center, width, height] = label;
-            let x = (x_center - width / 2) * canvas.width;
-            let y = (y_center - height / 2) * canvas.height;
+    ctx.drawImage(originalImage, 0, 0);  // Redibujar la imagen original
 
-            // Dibujar el círculo
-            ctx.beginPath();
-            ctx.arc(x, y, labelRadius, 0, 2 * Math.PI);
-            ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
-            ctx.fill();
-            ctx.stroke();
+    labels.forEach((label, index) => {
+        let [x_center, y_center] = label;
+        let x = x_center * canvas.width;
+        let y = y_center * canvas.height;
 
-            // Dibujar el número en el círculo
-            ctx.fillStyle = 'black';
-            ctx.font = '20px Arial';
-            ctx.fillText(index + 1, x - 10, y - 10);  // Ajustar el texto según sea necesario
-        });
-    };
-    img.src = canvas.toDataURL();
+        ctx.beginPath();
+        ctx.arc(x, y, labelRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'black';
+        ctx.font = '20px Arial';
+        ctx.fillText(index + 1, x - 10, y - 10);
+    });
 }
+
+
 
 function toggleDeleteMode() {
     deleteMode = !deleteMode;
@@ -92,10 +88,16 @@ function saveLabels() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log("Etiquetas guardadas", data);
+        if (data.message) {
+            alert("Etiquetas guardadas correctamente");
+        } else {
+            alert("Error al guardar etiquetas: " + data.error);
+        }
     })
     .catch(error => console.error("Error guardando etiquetas:", error));
 }
+
+
 
 canvas.addEventListener('click', function(event) {
     const rect = canvas.getBoundingClientRect();
