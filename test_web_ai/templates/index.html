@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detección de Objetos</title>
+    <style>
+        #canvas { 
+            border: 1px solid #000;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sube una imagen para detección</h1>
+    <input type="file" id="imageInput">
+    <button onclick="uploadImage()">Procesar</button>
+    <br><br>
+    
+    <h2>Imagen Original:</h2>
+    <canvas id="canvas"></canvas>  <!-- Aquí se dibuja la imagen original y las etiquetas -->
+
+    <br><br>
+    
+    <h2>Imagen Procesada:</h2>
+    <img id="processedImage" src="" alt="Imagen procesada" style="max-width: 100%;">
+
+    <br><br>
+    
+    <button onclick="toggleDeleteMode()">Modo Borrar</button>
+    <button onclick="toggleAddMode()">Modo Añadir</button>
+    <button onclick="saveLabels()">Guardar Cambios</button>
+
+    <!-- Referencias a los scripts externos -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
