@@ -7,18 +7,60 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Sube una imagen para detección</h1>
-    <input type="file" id="imageInput">
-    <button onclick="uploadImage()">Procesar</button>
-    <br><br>
     
-    <h2>Imagen Procesada</h2>
+    <input type="file" id="imageInput" style="display: none;" accept="image/*">
+    <input type="file" id="folderInput" style="display: none;" webkitdirectory directory multiple>
+    
+    <video id="webcam" autoplay style="display: none;"></video>
+    
     <canvas id="canvas"></canvas>  <!-- Aquí se dibuja la imagen original y las etiquetas -->
+    <br>
+    <button onclick="uploadImage()">Procesar</button>
     
-    <br><br>
-    <button onclick="toggleDeleteMode()">Modo Borrar</button>
-    <button onclick="toggleAddMode()">Modo Añadir</button>
-    <button onclick="saveLabels()">Guardar Cambios</button>
+    <div class="button-container">
+        <!-- Botones con iconos (sin texto) -->
+        <button onclick="toggleDeleteMode()">
+            <img src="../static/icons/eraser_5411950.png" alt="Borrar" class="icon">
+        </button>
+        <button onclick="toggleAddMode()">
+            <img src="../static/icons/paint-brush_2081162.png" alt="Añadir" class="icon">
+        </button>
+        <!-- Botón de ajustes -->
+        <button onclick="toggleSettings()">
+            <img src="../static/icons/settings_407111.png" alt="Ajustes" class="icon">
+        </button>
+    </div>
+        
+    <div class="input-container">
+        <button onclick="selectImage()">
+            <img src="../static/icons/photograph_345331.png" alt="Subir Imagen" class="icon">
+        </button>
+        <button onclick="startWebcam()">
+            <img src="../static/icons/webcam_980961.png" alt="Usar Webcam" class="icon">
+        </button>
+        <button onclick="selectFolder()">
+            <img src="../static/icons/open-folder_7164738.png" alt="Subir Carpeta" class="icon">
+        </button>
+    </div>
+
+        <!-- Ventana de Configuración (Oculta al inicio) -->
+    <div id="settingsWindow" class="settings-window" style="display: none;">
+        <h2>Configuración</h2>
+
+        <label for="labelSize">Tamaño de Etiqueta:</label>
+        <input type="range" id="labelSize" min="10" max="100" value="25" step="1">
+        <span id="labelSizeValue">25 px</span>
+
+        <br><br>
+
+        <button onclick="applySettings()">Aplicar</button>
+        <button onclick="closeSettings()">Cerrar</button>
+    </div>
+
+
+
+    <!-- Botón de guardar en la parte inferior derecha -->
+    <button class="save-button" onclick="saveLabels()">Save</button>
 
     <!-- Referencias a los scripts externos -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
