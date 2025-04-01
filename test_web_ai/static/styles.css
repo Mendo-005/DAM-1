@@ -1,0 +1,142 @@
+/* Estilo general */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #333232;
+    color: white;
+    text-align: center;
+    margin: 20px;
+}
+
+/* Títulos */
+h1, h2 {
+    color: #e0b011;
+}
+
+/* Botones */
+button {
+    background-color: #e0b011;
+    border: none;
+    color: white;
+    padding: 12px 20px;
+    margin: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: 0.3s;
+}
+
+button:hover {
+    background-color: #e0b011;
+}
+
+/* Contenedor de botones (Izquierda) */
+.button-container {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    left: 20px;
+    top: 100px;
+}
+
+.input-container {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    left: 20px;
+    top: 335px;
+}
+
+/* Botones con iconos */
+button img.icon {
+    width: 30px;
+    height: 30px;
+}
+
+/* Input de archivos */
+input[type="file"] {
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #333;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+/* Canvas (Imagen original) */
+#canvas {
+    width: 967px;   /* 24% de 4032 */
+    height: 725px;   /* 24% de 3024 */
+    border: 1px solid #e0b011;
+    background-color: white;
+    cursor: crosshair; /* Hace que el cursor sea una cruz */
+}
+
+/* Imagen procesada */
+#processedImage {
+    border: 2px solid #e0b011;
+    border-radius: 10px;
+    display: block;
+    margin: 20px auto;
+    max-width: 80%;
+}
+
+/* Botón de guardar en la parte inferior derecha */
+.save-button {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background-color: #e0b011;
+    border: none;
+    color: white;
+    padding: 12px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.save-button:hover {
+    background-color: #e0b011;
+}
+
+/* Estilos para la ventana emergente */
+.settings-window {
+    position: fixed;
+    top: 65%;
+    left: 10%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    background: #444;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.3);
+    color: white;
+    z-index: 1000;
+    text-align: center;
+    display: none; /* Oculta al inicio */
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Ajustar los inputs */
+.settings-window input {
+    width: 80%;
+    margin: 10px 0;
+}
+
+/* Botones dentro de la ventana */
+.settings-window button {
+    background-color: #e0b011;
+    border: none;
+    padding: 10px;
+    margin: 1px;
+    cursor: pointer;
+    border-radius: 5px;
+    width: 100px;
+    font-size: 14px;
+    transition: 0.3s;
+    color: white;
+}
+
+.settings-window button:hover {
+    background-color: #d1a000;
+}
