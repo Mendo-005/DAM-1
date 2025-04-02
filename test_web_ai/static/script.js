@@ -4,15 +4,17 @@ let deleteMode = false;
 let addMode = false;
 let canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
+let imageFiles = []; // Lista de imágenes cargadas
+let currentIndex = 0; // Índice de la imagen actual
 
-const labelRadius = 45;  // Radio de la etiqueta en píxeles
+const labelRadius = 45; // Radio de la etiqueta en píxeles
 let SCALE_FACTOR = 0.24; // Escala de la imagen (24% del tamaño original)
 let CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR); // Tamaño de las etiquetas basado en SCALE_FACTOR
 
 const IMAGE_WIDTH = 4032;
 const IMAGE_HEIGHT = 3024;
-const CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
-const CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
+let CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
+let CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
 
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
@@ -20,26 +22,106 @@ canvas.height = CANVAS_HEIGHT;
 let originalImage = new Image();
 
 function selectImage() {
-    document.getElementById('imageInput').click();
-}
+    const imageInput = document.getElementById('imageInput');
+    imageInput.click();
 
-function startWebcam() {
-    alert("Función de webcam aún no implementada.");  // Puedes reemplazar esto con la lógica real
+    imageInput.addEventListener('change', function () {
+        const file = imageInput.files[0]; // Seleccionar el primer archivo
+        if (!file || !file.type.startsWith('image/')) {
+            alert("Por favor selecciona un archivo de imagen válido.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            originalImage.src = event.target.result; // Cargar la imagen en el objeto Image
+            originalImage.onload = function () {
+                // Dibujar la imagen en el canvas
+                ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); // Limpiar el canvas
+                ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Actualizar variables globales
+                currentImage = file.name; // Guardar el nombre de la imagen actual
+                labels = []; // Reiniciar etiquetas
+                drawLabels();
+            };
+        };
+
+        reader.readAsDataURL(file); // Leer el archivo como una URL de datos
+    }, { once: true }); // Usar { once: true } para evitar múltiples listeners
 }
 
 function selectFolder() {
+    const folderInput = document.getElementById('folderInput');
+    folderInput.click();
+
+    folderInput.addEventListener('change', function () {
+        const files = Array.from(folderInput.files);
+        imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+        if (imageFiles.length === 0) {
+            alert("No se encontraron imágenes en la carpeta seleccionada.");
+            return;
+        }
+
+        currentIndex = 0; // Reiniciar al primer índice
+        loadImage(imageFiles[currentIndex]); // Cargar la primera imagen
+
+        // Restablecer el valor del input para permitir cargar la misma carpeta nuevamente
+        folderInput.value = '';
+    }, { once: true });
+}
+
+function previousImage() {
+    if (imageFiles.length === 0) {
+        alert("No hay imágenes cargadas.");
+        return;
+    }
+
+    currentIndex = (currentIndex - 1 + imageFiles.length) % imageFiles.length; // Navegación circular
+    loadImage(imageFiles[currentIndex]);
+}
+
+function nextImage() {
+    if (imageFiles.length === 0) {
+        alert("No hay imágenes cargadas.");
+        return;
+    }
+
+    currentIndex = (currentIndex + 1) % imageFiles.length; // Navegación circular
+    loadImage(imageFiles[currentIndex]);
+}
+
+function loadImage(file) {
+    const reader = new FileReader();
+
+    reader.onload = function (event) {
+        originalImage.src = event.target.result;
+        originalImage.onload = function () {
+            ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            currentImage = file.name;
+            labels = []; // Reiniciar etiquetas
+            drawLabels();
+        };
+    };
+
+    reader.readAsDataURL(file);
+}
+
+function startWebcam() {
     alert("Función de selección de carpeta aún no implementada.");  // Puedes reemplazar esto con la lógica real
 }
 
 function uploadImage() {
-    let input = document.getElementById("imageInput");
-    if (input.files.length === 0) {
+    const imageInput = document.getElementById("imageInput");
+    if (imageInput.files.length === 0) {
         alert("Selecciona una imagen");
         return;
     }
 
-    let formData = new FormData();
-    formData.append("file", input.files[0]);
+    const file = imageInput.files[0]; // Obtener el archivo seleccionado
+    const formData = new FormData();
+    formData.append("file", file);
 
     fetch("/upload", {
         method: "POST",
@@ -49,12 +131,14 @@ function uploadImage() {
     .then(data => {
         if (data.image_url) {
             originalImage.src = data.image_url;
-            originalImage.onload = function() {
+            originalImage.onload = function () {
                 ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-                currentImage = input.files[0].name;
+                currentImage = file.name;
                 labels = data.labels || [];
                 drawLabels();
             };
+        } else {
+            alert("Error al procesar la imagen: " + (data.error || "Error desconocido"));
         }
     })
     .catch(error => console.error("Error:", error));
@@ -82,11 +166,14 @@ function drawLabels() {
         ctx.fillText(index + 1, x, y);
     });
 
-    ctx.fillStyle = 'black';
-    ctx.font = "bold 26px Arial";
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; // Fondo semitransparente
+    ctx.fillRect(CANVAS_WIDTH - 300, 5, 300, 35); // Rectángulo más largo detrás del texto
+
+    ctx.fillStyle = 'black'; // Color del texto
+    ctx.font = "bold 28px Arial"; // Tamaño y estilo de la fuente
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
-    ctx.fillText(`Total de puros: ${labels.length}`, CANVAS_WIDTH - 10, 10);
+    ctx.fillText(`Total de etiquetas: ${labels.length}`, CANVAS_WIDTH - 10, 10);
 }
 
 function toggleDeleteMode() {
@@ -105,6 +192,28 @@ function updateButtonStyles() {
     document.querySelectorAll("button").forEach(button => button.style.backgroundColor = "#e0b011");
     if (deleteMode) document.querySelector("button[onclick='toggleDeleteMode()']").style.backgroundColor = "#ff5050";
     if (addMode) document.querySelector("button[onclick='toggleAddMode()']").style.backgroundColor = "#50ff50";
+}
+
+function clearCanvas() {
+    if (confirm("¿Estás seguro de que deseas limpiar el canvas por completo?")) { 
+        labels = []; // Eliminar todas las etiquetas
+        imageFiles = []; // Limpiar la lista global de imágenes
+        currentImage = ''; // Eliminar la referencia a la imagen actual
+        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); // Limpiar el canvas completamente
+
+        // Restablecer el valor de los inputs para permitir cargar la misma imagen o carpeta nuevamente
+        const imageInput = document.getElementById('imageInput');
+        const folderInput = document.getElementById('folderInput');
+        imageInput.value = '';
+        folderInput.value = '';
+    }
+}
+
+function undoLastLabel() {
+    if (labels.length > 0) {
+        labels.pop();
+        drawLabels();
+    }
 }
 
 function saveLabels() {
@@ -131,11 +240,11 @@ function saveLabels() {
 
 canvas.addEventListener('click', function(event) {
     const rect = canvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / CANVAS_WIDTH;
-    const y = (event.clientY - rect.top) / CANVAS_HEIGHT;
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
 
     if (addMode) {
-        labels.push([x, y, 0.1, 0.1]);
+        labels.push([x, y]);
         drawLabels();
     } else if (deleteMode) {
         labels = labels.filter(label => {
