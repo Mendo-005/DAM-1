@@ -43,7 +43,7 @@ button:hover {
     flex-direction: column;
     position: absolute;
     left: 20px;
-    top: 335px;
+    top: 570px;
 }
 
 /* Botones con iconos */
@@ -67,7 +67,7 @@ input[type="file"] {
     width: 967px;   /* 24% de 4032 */
     height: 725px;   /* 24% de 3024 */
     border: 1px solid #e0b011;
-    background-color: white;
+    background-color: rgba(255, 238, 190, 0.842);
     cursor: crosshair; /* Hace que el cursor sea una cruz */
 }
 
@@ -101,7 +101,7 @@ input[type="file"] {
 /* Estilos para la ventana emergente */
 .settings-window {
     position: fixed;
-    top: 65%;
+    top: 75%;
     left: 10%;
     transform: translate(-50%, -50%);
     width: 300px;
