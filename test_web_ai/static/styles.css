@@ -153,26 +153,28 @@ input[type="file"] {
 
 /* ------------------------- ESTILOS PARA LA CÁMARA WEB ------------------------- */
 #webcam-container {
-    display: none;
-    position: fixed;
-    top: 50%;
+    display: none; 
+    position: fixed; 
+    top: 40%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 1000;
-    background: white;
-    border: 2px solid #ccc;
+    width: 700px; 
+    height: auto; 
+    border: 2px solid #f0c020; 
     border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    padding: 20px;
-    text-align: center;
+    background: #444; 
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); 
+    padding: 20px; 
+    z-index: 1000; 
+    text-align: center; 
 }
 
 #webcam-preview-container {
-    position: relative;
     width: 640px; 
-    height: 480px; 
+    height: 480px;
     overflow: hidden; 
-    background: black; 
+    margin: 0 auto 20px auto; 
+    position: relative; 
 }
 
 #webcam-preview-container video {
@@ -185,11 +187,6 @@ input[type="file"] {
     object-fit: cover; /* Asegura que el video llene el contenedor */
 }
 
-#webcam-video {
-    width: 100%;
-    height: auto;
-}
-
 #webcam-container button {
     margin: 5px;
     padding: 10px 20px;
@@ -197,10 +194,13 @@ input[type="file"] {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    background-color: #e0b011; 
+    color: white;
+    transition: background-color 0.3s ease;
 }
 
 #webcam-container button:hover {
-    background-color: #ddd;
+    background-color: #f0c020; 
 }
 
 /* ------------------------- ESTILOS RESPONSIVOS ------------------------- */
