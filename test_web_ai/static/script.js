@@ -334,21 +334,56 @@ function uploadImage() {
 }
 
 function saveLabels() {
-    /* Guarda las etiquetas en el servidor */
+    /* Muestra el cuadro de diálogo para introducir datos antes de guardar */
+    document.getElementById('saveDialog').style.display = 'block';
+    document.getElementById('overlay').style.display = 'block';
+}
+
+function closeSaveDialog() {
+    /* Cierra el cuadro de diálogo sin guardar */
+    document.getElementById('saveDialog').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+}
+
+function confirmSave() {
+    /* Guarda las etiquetas con el nuevo nombre de archivo */
+    const drawerNumber = document.getElementById('drawerNumber').value.trim();
+    const date = document.getElementById('date').value.trim();
+    const cepo = document.getElementById('cepo').value.trim();
+
+    if (!drawerNumber || !date || !cepo) {
+        alert("Por favor, completa todos los campos.");
+        return;
+    }
+
+    // Convertir la fecha al formato ddmmaa
+    const formattedDate = date.split('-').reverse().join('').slice(0, 6);
+
+    // Generar el nuevo nombre de archivo
+    const newFileName = `${drawerNumber}_${formattedDate}_${cepo}.jpg`;
+
+    // Cerrar el cuadro de diálogo
+    closeSaveDialog();
+
+    // Enviar los datos al servidor para guardar etiquetas y renombrar imágenes
     fetch(`/update_labels`, {
         method: "POST",
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            file: currentImage,
-            labels: labels
+            file: newFileName,          // Nuevo nombre del archivo
+            labels: labels,             // Etiquetas
+            originalImage: currentImage // Nombre de la imagen original
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.message) {
-            alert("Etiquetas guardadas correctamente");
+            // Actualizar el nombre de la imagen actual y procesada
+            currentImage = newFileName;
+            originalImage.src = `/static/images/${newFileName}`; // Ruta de la imagen renombrada
+            alert("Etiquetas y nombres de archivo guardados correctamente");
         } else {
             alert("Error al guardar etiquetas: " + data.error);
         }
@@ -370,13 +405,21 @@ function closeSettings() {
 
 function applySettings() {
     /* Aplica los cambios de configuración (tamaño de etiquetas) */
-    SCALE_FACTOR = parseFloat(document.getElementById('labelSize').value) / 100;
+    const newScaleFactor = parseFloat(document.getElementById('labelSize').value) / 100;
+
+    if (isNaN(newScaleFactor) || newScaleFactor <= 0) {
+        alert("Por favor, introduce un valor válido para el tamaño de las etiquetas.");
+        return;
+    }
+
+    // Actualizar únicamente el radio de las etiquetas
+    SCALE_FACTOR = newScaleFactor;
     CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
-    CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
-    CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
-    canvas.width = CANVAS_WIDTH;
-    canvas.height = CANVAS_HEIGHT;
+
+    // Redibujar las etiquetas con el nuevo tamaño
     drawLabels();
+
+    // Cerrar la ventana de configuración
     closeSettings();
 }
 
