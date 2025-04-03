@@ -220,31 +220,43 @@ def uploaded_file(filename):
 
 @app.route("/update_labels", methods=["POST"])
 def update_labels():
-    """Actualiza etiquetas manualmente desde frontend"""
+    """Actualiza etiquetas manualmente desde frontend y renombra archivos"""
     data = request.get_json()
-    if not data or 'file' not in data or 'labels' not in data:
+    if not data or 'file' not in data or 'labels' not in data or 'originalImage' not in data:
         return jsonify({"error": "Datos inválidos"}), 400
 
     try:
-        filename = secure_filename(data['file'])
+        # Datos recibidos
+        new_filename = secure_filename(data['file'])  # Nuevo nombre del archivo
         labels = data['labels']
+        original_image = secure_filename(data['originalImage'])  # Nombre original del archivo
 
-        # Validar formato de las etiquetas
-        formatted_labels = []
-        for label in labels:
-            if len(label) == 2:
-                # Si faltan width y height, agregar valores predeterminados
-                formatted_labels.append([label[0], label[1], 0.1, 0.1])
-            elif len(label) == 4:
-                formatted_labels.append(label)
-            else:
-                return jsonify({"error": "Formato de etiquetas inválido"}), 400
+        # Rutas de los archivos
+        original_path = os.path.join(UPLOAD_FOLDER, original_image)
+        new_original_path = os.path.join(UPLOAD_FOLDER, new_filename)
+        processed_path = os.path.join(PROCESSED_FOLDER, original_image)
+        new_processed_path = os.path.join(PROCESSED_FOLDER, new_filename)
 
-        label_path = DetectionUtils.save_yolo_labels(filename, formatted_labels)
+        # Renombrar la imagen original
+        if os.path.exists(original_path):
+            os.rename(original_path, new_original_path)
+        else:
+            return jsonify({"error": f"Archivo original no encontrado: {original_image}"}), 404
+
+        # Renombrar la imagen procesada
+        if os.path.exists(processed_path):
+            os.rename(processed_path, new_processed_path)
+        else:
+            return jsonify({"error": f"Archivo procesado no encontrado: {original_image}"}), 404
+
+        # Guardar etiquetas en el nuevo archivo
+        label_path = DetectionUtils.save_yolo_labels(new_filename, labels)
+
         return jsonify({
-            "message": "Etiquetas actualizadas",
+            "message": "Etiquetas y archivos renombrados correctamente",
+            "new_image_url": f"/static/processed/{new_filename}",
             "label_path": label_path,
-            "count": len(formatted_labels)
+            "count": len(labels)
         })
     except Exception as e:
         logger.error(f"Error en update_labels: {str(e)}")
