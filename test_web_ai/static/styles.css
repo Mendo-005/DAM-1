@@ -5,6 +5,7 @@ body {
     color: white;
     text-align: center;
     margin: 20px;
+    overflow-x: hidden;
 }
 
 /* Títulos */
@@ -26,7 +27,8 @@ button {
 }
 
 button:hover {
-    background-color: #e0b011;
+    background-color: #f0c020;
+    transform: scale(1.05);
 }
 
 /* Contenedor de botones (Izquierda) */
@@ -36,6 +38,7 @@ button:hover {
     position: absolute;
     left: 20px;
     top: 100px;
+    gap: 10px;
 }
 
 .input-container {
@@ -44,12 +47,14 @@ button:hover {
     position: absolute;
     left: 20px;
     top: 570px;
+    gap: 10px;
 }
 
 /* Botones con iconos */
 button img.icon {
     width: 30px;
     height: 30px;
+    vertical-align: middle;
 }
 
 /* Input de archivos */
@@ -69,6 +74,8 @@ input[type="file"] {
     border: 1px solid #e0b011;
     background-color: rgba(255, 238, 190, 0.842);
     cursor: crosshair; /* Hace que el cursor sea una cruz */
+    margin: 0 auto;
+    display: block;
 }
 
 /* Imagen procesada */
@@ -95,26 +102,29 @@ input[type="file"] {
 }
 
 .save-button:hover {
-    background-color: #e0b011;
+    background-color: #f0c020;
 }
 
 /* Estilos para la ventana emergente */
 .settings-window {
     position: fixed;
-    top: 75%;
-    left: 10%;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
     width: 300px;
     background: #444;
     padding: 20px;
     border-radius: 10px;
-    box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.3);
+    box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
     color: white;
     z-index: 1000;
     text-align: center;
-    display: none; /* Oculta al inicio */
-    flex-direction: column;
-    align-items: center;
+    display: none;
+}
+
+.settings-window h2 {
+    margin-top: 0;
+    color: #e0b011;
 }
 
 /* Ajustar los inputs */
@@ -128,7 +138,7 @@ input[type="file"] {
     background-color: #e0b011;
     border: none;
     padding: 10px;
-    margin: 1px;
+    margin: 5px;
     cursor: pointer;
     border-radius: 5px;
     width: 100px;
@@ -138,5 +148,98 @@ input[type="file"] {
 }
 
 .settings-window button:hover {
-    background-color: #d1a000;
+    background-color: #f0c020;
+}
+
+/* ------------------------- ESTILOS PARA LA CÁMARA WEB ------------------------- */
+#webcam-container {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: white;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    text-align: center;
+}
+
+#webcam-preview-container {
+    position: relative;
+    width: 640px; 
+    height: 480px; 
+    overflow: hidden; 
+    background: black; 
+}
+
+#webcam-preview-container video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: auto;
+    height: 100%;
+    object-fit: cover; /* Asegura que el video llene el contenedor */
+}
+
+#webcam-video {
+    width: 100%;
+    height: auto;
+}
+
+#webcam-container button {
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#webcam-container button:hover {
+    background-color: #ddd;
+}
+
+/* ------------------------- ESTILOS RESPONSIVOS ------------------------- */
+@media (max-width: 1200px) {
+    #canvas {
+        width: 80%;
+        height: auto;
+        max-width: 967px;
+        max-height: 725px;
+    }
+    
+    .button-container, .input-container {
+        position: relative;
+        left: auto;
+        top: auto;
+        flex-direction: row;
+        justify-content: center;
+        margin: 20px 0;
+    }
+    
+    .save-button {
+        position: relative;
+        bottom: auto;
+        right: auto;
+        margin-top: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    #canvas {
+        width: 95%;
+    }
+    
+    .webcam-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .webcam-btn {
+        width: 200px;
+    }
 }
