@@ -210,10 +210,8 @@ def upload_file():
     cv2.imwrite(processed_path, img)
     DetectionUtils.save_yolo_labels(filename, detections)
 
-    return jsonify({
-        "image_url": f"/static/processed/{filename}",  # Ruta accesible públicamente
-        "labels": detections
-    })
+    return jsonify({"image_url": f"/uploads/{filename}", "labels": detections})
+
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -229,11 +227,24 @@ def update_labels():
 
     try:
         filename = secure_filename(data['file'])
-        label_path = DetectionUtils.save_yolo_labels(filename, data['labels'])
+        labels = data['labels']
+
+        # Validar formato de las etiquetas
+        formatted_labels = []
+        for label in labels:
+            if len(label) == 2:
+                # Si faltan width y height, agregar valores predeterminados
+                formatted_labels.append([label[0], label[1], 0.1, 0.1])
+            elif len(label) == 4:
+                formatted_labels.append(label)
+            else:
+                return jsonify({"error": "Formato de etiquetas inválido"}), 400
+
+        label_path = DetectionUtils.save_yolo_labels(filename, formatted_labels)
         return jsonify({
             "message": "Etiquetas actualizadas",
             "label_path": label_path,
-            "count": len(data['labels'])  # Nuevo conteo
+            "count": len(formatted_labels)
         })
     except Exception as e:
         logger.error(f"Error en update_labels: {str(e)}")
