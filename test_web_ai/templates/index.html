@@ -12,8 +12,6 @@
     <input type="file" id="imageInput" style="display: none;" accept="image/*">
     <input type="file" id="folderInput" webkitdirectory multiple style="display: none;" />
     
-    <video id="webcam" autoplay style="display: none;"></video>
-    
     <canvas id="canvas"></canvas>  <!-- Aquí se dibuja la imagen original y las etiquetas -->
     <br>
 
@@ -51,7 +49,7 @@
         <button onclick="selectImage()">
             <img src="../static/icons/photograph_345331.png" alt="Subir Imagen" class="icon">
         </button>
-        <button onclick="startWebcam()">
+        <button id="webcam-button" onclick="toggleWebcam()">
             <img src="../static/icons/webcam_980961.png" alt="Usar Webcam" class="icon">
         </button>
         <button onclick="selectFolder()">
@@ -59,7 +57,18 @@
         </button>
     </div>
 
-        <!-- Ventana de Configuración (Oculta al inicio) -->
+    <!-- Contenedor de la cámara (inicialmente oculto) -->
+    <div id="webcam-container" style="display: none; position: relative; width: 640px; margin: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
+        <div id="webcam-preview-container" style="width: 640px; height: 480px; overflow: hidden; margin-bottom: 10px;">
+            <video id="webcam-video" autoplay playsinline style="width: 100%; height: auto;"></video>
+        </div>
+        <div style="text-align: center;">
+            <button id="capture-button" onclick="capturePhoto()">Capturar Foto</button>
+            <button id="close-webcam-button" onclick="toggleWebcam()">Cerrar Cámara</button>
+        </div>
+    </div>
+
+    <!-- Ventana de Configuración (Oculta al inicio) -->
     <div id="settingsWindow" class="settings-window" style="display: none;">
         <h2>Configuración</h2>
 
@@ -72,8 +81,6 @@
         <button onclick="applySettings()">Aplicar</button>
         <button onclick="closeSettings()">Cerrar</button>
     </div>
-
-
 
     <!-- Botón de guardar en la parte inferior derecha -->
     <button class="save-button" onclick="saveLabels()">Save</button>
