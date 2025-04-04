@@ -32,22 +32,14 @@ button:hover {
 }
 
 /* Contenedor de botones (Izquierda) */
-.button-container {
+.left-buttons-container {
+    position: fixed;
+    left: 20px;
+    top: 50px;
     display: flex;
     flex-direction: column;
-    position: absolute;
-    left: 20px;
-    top: 100px;
-    gap: 10px;
-}
-
-.input-container {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    left: 20px;
-    top: 570px;
-    gap: 10px;
+    gap: 20px;
+    max-width: 150px; /* Limitar el ancho máximo del contenedor */
 }
 
 /* Botones con iconos */
@@ -57,41 +49,44 @@ button img.icon {
     vertical-align: middle;
 }
 
-/* Input de archivos */
-input[type="file"] {
-    padding: 10px;
-    border-radius: 5px;
-    background-color: #333;
-    color: white;
-    border: none;
-    cursor: pointer;
+/* Contenedor del canvas */
+.canvas-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin: 20px auto;
+    max-width: 90%;
+    max-height: 90vh;
 }
 
 /* Canvas (Imagen original) */
 #canvas {
-    width: 967px;   /* 24% de 4032 */
-    height: 725px;   /* 24% de 3024 */
+    width: 75%; 
+    height: auto; 
+    max-width: 100%; 
     border: 1px solid #e0b011;
     background-color: rgba(255, 238, 190, 0.842);
-    cursor: crosshair; /* Hace que el cursor sea una cruz */
-    margin: 0 auto;
-    display: block;
+    cursor: crosshair;
+    object-fit: contain;
+    margin: 0 auto; /* Centrar el canvas */
 }
 
-/* Imagen procesada */
-#processedImage {
-    border: 2px solid #e0b011;
-    border-radius: 10px;
-    display: block;
-    margin: 20px auto;
-    max-width: 80%;
+/* Contenedor de botones de procesamiento */
+.processing-buttons-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px; 
+    margin-top: 30px; 
+    padding: 10px; 
 }
 
-/* Botón de guardar en la parte inferior derecha */
+/* Botón de guardar */
 .save-button {
+    right: 300px;
     position: absolute;
-    bottom: 20px;
-    right: 20px;
+    justify-content: end;
     background-color: #e0b011;
     border: none;
     color: white;
@@ -99,13 +94,100 @@ input[type="file"] {
     font-size: 16px;
     cursor: pointer;
     border-radius: 5px;
+    transition: 0.3s;
 }
 
 .save-button:hover {
     background-color: #f0c020;
 }
 
-/* Estilos para la ventana emergente */
+/* Contenedor de la cámara */
+#webcam-container {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 700px;
+    height: auto;
+    border: 2px solid #f0c020;
+    border-radius: 10px;
+    background: #444;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    z-index: 1000;
+    text-align: center;
+}
+
+#webcam-preview-container {
+    width: 640px;
+    height: 480px;
+    overflow: hidden;
+    margin: 0 auto 20px auto;
+    position: relative;
+}
+
+#webcam-preview-container video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: auto;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Diálogo de guardar */
+.dialog {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border: 1px solid #ccc;
+    z-index: 1000;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    color: black;
+}
+
+.dialog input {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0;
+    box-sizing: border-box;
+}
+
+.dialog button {
+    margin: 5px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #e0b011;
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+.dialog button:hover {
+    background-color: #f0c020;
+}
+
+/* Overlay */
+.overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+/* Ventana de configuración */
 .settings-window {
     position: fixed;
     top: 50%;
@@ -127,13 +209,11 @@ input[type="file"] {
     color: #e0b011;
 }
 
-/* Ajustar los inputs */
 .settings-window input {
     width: 80%;
     margin: 10px 0;
 }
 
-/* Botones dentro de la ventana */
 .settings-window button {
     background-color: #e0b011;
     border: none;
@@ -151,142 +231,31 @@ input[type="file"] {
     background-color: #f0c020;
 }
 
-/* ------------------------- ESTILOS PARA LA CÁMARA WEB ------------------------- */
-#webcam-container {
-    display: none; 
-    position: fixed; 
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 700px; 
-    height: auto; 
-    border: 2px solid #f0c020; 
-    border-radius: 10px;
-    background: #444; 
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); 
-    padding: 20px; 
-    z-index: 1000; 
-    text-align: center; 
-}
-
-#webcam-preview-container {
-    width: 640px; 
-    height: 480px;
-    overflow: hidden; 
-    margin: 0 auto 20px auto; 
-    position: relative; 
-}
-
-#webcam-preview-container video {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: auto;
-    height: 100%;
-    object-fit: cover; /* Asegura que el video llene el contenedor */
-}
-
-#webcam-container button {
-    margin: 5px;
-    padding: 10px 20px;
-    font-size: 16px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    background-color: #e0b011; 
-    color: white;
-    transition: background-color 0.3s ease;
-}
-
-#webcam-container button:hover {
-    background-color: #f0c020; 
-}
-
-
-/* ------------------------- Estilos para el cuadro de diálogo ------------------------- */
-.dialog {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 20px;
-    border: 1px solid #ccc;
-    z-index: 1000;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.dialog input {
-    width: 100%;
-    padding: 8px;
-    margin: 5px 0;
-    box-sizing: border-box;
-}
-
-.dialog button {
-    margin: 5px;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.dialog button:hover {
-    background-color: #ddd;
-}
-
-/* Estilos para el overlay */
-.overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-}
-
-/* ------------------------- ESTILOS RESPONSIVOS ------------------------- */
-@media (max-width: 1200px) {
-    #canvas {
-        width: 80%;
-        height: auto;
-        max-width: 967px;
-        max-height: 725px;
-    }
-    
-    .button-container, .input-container {
-        position: relative;
-        left: auto;
-        top: auto;
+/* Estilos responsivos */
+@media (max-width: 768px) {
+    .left-buttons-container {
         flex-direction: row;
         justify-content: center;
-        margin: 20px 0;
+        gap: 10px;
+        position: static;
+        margin-bottom: 20px;
     }
-    
-    .save-button {
-        position: relative;
-        bottom: auto;
-        right: auto;
-        margin-top: 20px;
-    }
-}
 
-@media (max-width: 768px) {
-    #canvas {
-        width: 95%;
-    }
-    
-    .webcam-controls {
+    .processing-buttons-container {
         flex-direction: column;
         gap: 10px;
     }
-    
-    .webcam-btn {
-        width: 200px;
+
+    #canvas {
+        width: 95%;
+        height: auto;
     }
+}
+
+/* Contador de etiquetas */
+.label-counter {
+    margin-top: 10px;
+    text-align: right;
+    font-size: 18px;
+    font-weight: bold;
 }
