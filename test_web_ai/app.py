@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 # Carga del modelo YOLO (ruta específica al archivo de pesos)
 try:
-    model = YOLO("I:/AI/data/runs/train2/weights/best.pt")
+    model = YOLO("../runs/train2/weights/best.pt")
     logger.info("Modelo YOLO cargado correctamente")
 except Exception as e:
     logger.error(f"Error al cargar el modelo YOLO: {str(e)}")
