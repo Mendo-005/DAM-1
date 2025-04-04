@@ -5,58 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detección de Objetos</title>
     <link rel="icon" type="image/png" href="../static/icons/logo-desktop.png">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"> -->
+    <link rel="stylesheet" href="../static/styles.css">
 </head>
 <body>
-    
     <input type="file" id="imageInput" style="display: none;" accept="image/*">
     <input type="file" id="folderInput" webkitdirectory multiple style="display: none;" />
+
     
-    <canvas id="canvas"></canvas>  <!-- Aquí se dibuja la imagen original y las etiquetas -->
-    <br>
-
-    <div>
-        <button onclick="previousImage()">
-        <img src="../static/icons/left_7242687.png" alt="Anterior" class="icon">
-        </button>
-        <button onclick="uploadImage()">Procesar</button>
-        <button onclick="nextImage()">
-        <img src="../static/icons/right_7242682.png" alt="Sigiente" class="icon">
-        </button>
-    </div>
-
-    <div class="button-container">
-        <!-- Botones con iconos (sin texto) -->
-        <button onclick="toggleDeleteMode()">
-            <img src="../static/icons/eraser_5411950.png" alt="Borrar" class="icon">
-        </button>
-        <button onclick="toggleAddMode()">
-            <img src="../static/icons/paint-brush_2081162.png" alt="Añadir" class="icon">
-        </button>
-        <button onclick="undoLastLabel()">
-            <img src="../static/icons/undo_5629902.png" alt="Deshacer" class="icon">
-        </button>
-        <button onclick="clearCanvas()">
-            <img src="../static/icons/broom_13810466.png" alt="Limpiar" class="icon">
-        </button>
-        <!-- Botón de ajustes -->
-        <button onclick="toggleSettings()">
-            <img src="../static/icons/settings_407111.png" alt="Ajustes" class="icon">
-        </button>
-    </div>
+        <!-- Contenedor de botones a la izquierda -->
+        <div class="left-buttons-container">
+            <div class="button-container">
+                <!-- Botones con iconos (sin texto) -->
+                <button onclick="toggleDeleteMode()">
+                    <img src="../static/icons/eraser_5411950.png" alt="Borrar" class="icon">
+                </button>
+                <button onclick="toggleAddMode()">
+                    <img src="../static/icons/paint-brush_2081162.png" alt="Añadir" class="icon">
+                </button>
+                <button onclick="undoLastLabel()">
+                    <img src="../static/icons/undo_5629902.png" alt="Deshacer" class="icon">
+                </button>
+                <button onclick="clearCanvas()">
+                    <img src="../static/icons/broom_13810466.png" alt="Limpiar" class="icon">
+                </button>
+                <!-- Botón de ajustes -->
+                <button onclick="toggleSettings()">
+                    <img src="../static/icons/settings_407111.png" alt="Ajustes" class="icon">
+                </button>
+            </div>
+            
+            <div class="input-container">
+                <button onclick="selectImage()">
+                    <img src="../static/icons/photograph_345331.png" alt="Subir Imagen" class="icon">
+                </button>
+                <button id="webcam-button" onclick="toggleWebcam()">
+                    <img src="../static/icons/webcam_980961.png" alt="Usar Webcam" class="icon">
+                </button>
+                <button onclick="selectFolder()">
+                    <img src="../static/icons/open-folder_7164738.png" alt="Subir Carpeta" class="icon">
+                </button>
+            </div>
+        </div>
         
-    <div class="input-container">
-        <button onclick="selectImage()">
-            <img src="../static/icons/photograph_345331.png" alt="Subir Imagen" class="icon">
-        </button>
-        <button id="webcam-button" onclick="toggleWebcam()">
-            <img src="../static/icons/webcam_980961.png" alt="Usar Webcam" class="icon">
-        </button>
-        <button onclick="selectFolder()">
-            <img src="../static/icons/open-folder_7164738.png" alt="Subir Carpeta" class="icon">
-        </button>
-    </div>
+        <!-- Contenedor principal -->
+        <div class="main-container">
+            
+            <!-- Contenedor de los botones -->
+            <div class="buttons-container">
+                <div id="label-counter" class="label-counter">
+                    Total de puros: 0
+                </div>
 
+                <button onclick="previousImage()">
+                    <img src="../static/icons/left_7242687.png" alt="Anterior" class="icon">
+                </button>
+                <button onclick="uploadImage()">Procesar</button>
+                <button onclick="nextImage()">
+                    <img src="../static/icons/right_7242682.png" alt="Siguiente" class="icon">
+                </button>
+                <button class="save-button" onclick="saveLabels()">Save</button>
+            </div>
+            <!-- Contenedor del canvas -->
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+
+    
     <!-- Contenedor de la cámara (inicialmente oculto) -->
     <div id="webcam-container">
         <div id="webcam-preview-container">
@@ -67,7 +83,7 @@
             <button id="close-webcam-button" onclick="toggleWebcam()">Cerrar Cámara</button>
         </div>
     </div>
-
+    
     <!-- Ventana de Configuración (Oculta al inicio) -->
     <div id="settingsWindow" class="settings-window" style="display: none;">
         <h2>Configuración</h2>
@@ -82,8 +98,7 @@
         <button onclick="closeSettings()">Cerrar</button>
     </div>
 
-    <!-- Botón de guardar en la parte inferior derecha -->
-    <button class="save-button" onclick="saveLabels()">Save</button>
+    <!-- Diálogo de guardar -->
     <div id="saveDialog" class="dialog">
         <h3>Guardar etiquetas</h3>
 
