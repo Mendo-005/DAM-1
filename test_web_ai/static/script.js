@@ -11,20 +11,36 @@ let webcamStream = null;     // Para controlar el stream de la cámara
 let webcamVideo = document.createElement('video'); // Elemento video para la cámara
 
 // Configuración de etiquetas
-const labelRadius = 45;      
-let SCALE_FACTOR = 0.24;     
-let CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR); // Radio escalado
+const labelRadius = 45; // Radio base de las etiquetas
+let SCALE_FACTOR = 1; // Factor de escala inicial
+let CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
 
-// Dimensiones base de la imagen
-const IMAGE_WIDTH = 4032;
-const IMAGE_HEIGHT = 3024;
+// Dimensiones base del canvas al iniciar la web
+let IMAGE_WIDTH = 800; // Ancho inicial del canvas
+let IMAGE_HEIGHT = 400; // Alto inicial del canvas
 let CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
 let CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
 
 // Configuración inicial del canvas
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
+
 let originalImage = new Image();  // Objeto Image para cargar las imágenes
+
+// Función para actualizar las dimensiones del canvas según la imagen seleccionada
+function updateCanvasDimensions(image) {
+    IMAGE_WIDTH = image.naturalWidth; // Ancho real de la imagen
+    IMAGE_HEIGHT = image.naturalHeight; // Alto real de la imagen
+    CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
+    CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
+
+    // Actualizar las dimensiones del canvas
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+
+    // Recalcular el tamaño de las etiquetas en función del nuevo tamaño del canvas
+    CANVAS_LABEL = Math.round(labelRadius * (CANVAS_WIDTH / IMAGE_WIDTH));
+}
 
 // ------------------------- FUNCIONES DE CÁMARA WEB -------------------------
 async function toggleWebcam() {
@@ -120,6 +136,7 @@ function selectImage() {
         reader.onload = function (event) {
             originalImage.src = event.target.result;
             originalImage.onload = function () {
+                updateCanvasDimensions(originalImage);
                 ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
                 ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
                 currentImage = file.name;
@@ -157,6 +174,7 @@ function loadImage(file) {
     reader.onload = function (event) {
         originalImage.src = event.target.result;
         originalImage.onload = function () {
+            updateCanvasDimensions(originalImage);
             ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
             currentImage = file.name;
             labels = [];
@@ -188,8 +206,13 @@ function nextImage() {
 }
 
 // ------------------------- FUNCIONES DE ETIQUETADO -------------------------
+function updateLabelCounter() {
+    const labelCounter = document.getElementById('label-counter');
+    labelCounter.textContent = `Total de etiquetas: ${labels.length}`;
+}
+
 function drawLabels() {
-    /* Dibuja todas las etiquetas en el canvas */
+    // Limpiar el canvas y redibujar la imagen
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
@@ -214,14 +237,8 @@ function drawLabels() {
         ctx.fillText(index + 1, x, y);
     });
 
-    // Contador de etiquetas 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.fillRect(CANVAS_WIDTH - 300, 5, 300, 35);
-    ctx.fillStyle = 'black';
-    ctx.font = "bold 28px Arial";
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`Total de etiquetas: ${labels.length}`, CANVAS_WIDTH - 10, 10);
+    // Actualizar el contador de etiquetas fuera del canvas
+    updateLabelCounter();
 }
 
 // ------------------------- MANEJO DE MODOS (AÑADIR/ELIMINAR) -------------------------
@@ -275,8 +292,18 @@ function clearCanvas() {
         labels = [];
         imageFiles = [];
         currentImage = '';
-        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         
+        // Restablecer las dimensiones del canvas a los valores iniciales
+        IMAGE_WIDTH = 800; // Ancho inicial
+        IMAGE_HEIGHT = 400; // Alto inicial
+        CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
+        CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        // Limpiar el contenido del canvas
+        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
         // Resetear inputs
         document.getElementById('imageInput').value = '';
         document.getElementById('folderInput').value = '';
@@ -321,6 +348,7 @@ function uploadImage() {
         if (data.image_url) {
             originalImage.src = data.image_url;
             originalImage.onload = function () {
+                updateCanvasDimensions(originalImage);
                 ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
                 currentImage = file.name;
                 labels = data.labels || [];
