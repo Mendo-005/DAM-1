@@ -212,33 +212,40 @@ function updateLabelCounter() {
 }
 
 function drawLabels() {
-    // Limpiar el canvas y redibujar la imagen
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    // Dibujar cada etiqueta
+    // Limpiar completamente el canvas primero
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Redibujar la imagen de fondo si existe
+    if (originalImage && originalImage.complete) {
+        ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+    } else {
+        // Si no hay imagen, dibujar fondo amarillo
+        ctx.fillStyle = 'rgba(255, 238, 190, 0.842)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // Dibujar todas las etiquetas
     labels.forEach((label, index) => {
-        let [x_center, y_center] = label;
-        let x = x_center * CANVAS_WIDTH;
-        let y = y_center * CANVAS_HEIGHT;
-
-        // Círculo de la etiqueta
+        const [x_center, y_center] = label;
+        const x = x_center * canvas.width;
+        const y = y_center * canvas.height;
+        
+        // Dibujar círculo
         ctx.beginPath();
-        ctx.arc(x, y, CANVAS_LABEL, 0, 2 * Math.PI);
+        ctx.arc(x, y, CANVAS_LABEL, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
         ctx.fill();
+        ctx.strokeStyle = '#000';
         ctx.stroke();
-
-        // Número de la etiqueta
-        ctx.fillStyle = 'black';
+        
+        // Dibujar número
+        ctx.fillStyle = '#000';
         ctx.font = `${Math.round(CANVAS_LABEL / 2)}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(index + 1, x, y);
+        ctx.fillText((index + 1).toString(), x, y);
     });
-
-    // Actualizar el contador de etiquetas fuera del canvas
-    updateLabelCounter();
+    updateLabelCounter(); // Actualizar el contador de etiquetas
 }
 
 // ------------------------- MANEJO DE MODOS (AÑADIR/ELIMINAR) -------------------------
@@ -258,9 +265,20 @@ function toggleAddMode() {
 
 function updateButtonStyles() {
     /* Actualiza los estilos visuales de los botones según el modo activo */
-    document.querySelectorAll("button").forEach(button => button.style.backgroundColor = "#e0b011");
-    if (deleteMode) document.querySelector("button[onclick='toggleDeleteMode()']").style.backgroundColor = "#ff5050";
-    if (addMode) document.querySelector("button[onclick='toggleAddMode()']").style.backgroundColor = "#50ff50";
+    const deleteBtn = document.querySelector("button[onclick='toggleDeleteMode()']");
+    const addBtn = document.querySelector("button[onclick='toggleAddMode()']");
+    
+    // Resetear colores
+    deleteBtn.style.backgroundColor = "#3a3a3a";
+    addBtn.style.backgroundColor = "#3a3a3a";
+    
+    // Aplicar colores según el modo activo
+    if (deleteMode) {
+        deleteBtn.style.backgroundColor = "#ff5050"; // Rojo para borrar
+    } 
+    if (addMode) {
+        addBtn.style.backgroundColor = "#50ff50"; // Verde para añadir
+    }
 }
 
 // ------------------------- EVENTOS DEL CANVAS -------------------------
@@ -287,27 +305,27 @@ canvas.addEventListener('click', function(event) {
 
 // ------------------------- FUNCIONES DE UTILIDAD -------------------------
 function clearCanvas() {
-    /* Limpia completamente el canvas y todas las variables */
     if (confirm("¿Estás seguro de que deseas limpiar el canvas por completo?")) { 
         labels = [];
         imageFiles = [];
         currentImage = '';
+        originalImage = new Image(); // <-- ¡IMPORTANTE! Resetear la imagen
         
-        // Restablecer las dimensiones del canvas a los valores iniciales
-        IMAGE_WIDTH = 800; // Ancho inicial
-        IMAGE_HEIGHT = 400; // Alto inicial
+        // Restablecer dimensiones iniciales
+        IMAGE_WIDTH = 800;
+        IMAGE_HEIGHT = 400;
         CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
         CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
         canvas.width = CANVAS_WIDTH;
         canvas.height = CANVAS_HEIGHT;
-
-        // Limpiar el contenido del canvas
-        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
+        
+        
         // Resetear inputs
         document.getElementById('imageInput').value = '';
         document.getElementById('folderInput').value = '';
+        updateLabelCounter();
     }
+
 }
 
 function undoLastLabel() {
@@ -367,6 +385,16 @@ function saveLabels() {
     document.getElementById('overlay').style.display = 'block';
 }
 
+function clearDialog() {
+    /* Limpia los campos del cuadro de diálogo */
+    if (confirm("¿Estás seguro de que deseas limpiar el cuadro por completo?")) { 
+    document.getElementById('drawerNumber').value = '';
+    document.getElementById('date').value = '';
+    document.getElementById('cepo').value = '';
+    document.getElementById('drawerNumber').focus();
+    }
+}
+
 function closeSaveDialog() {
     /* Cierra el cuadro de diálogo sin guardar */
     document.getElementById('saveDialog').style.display = 'none';
@@ -420,36 +448,40 @@ function confirmSave() {
 }
 
 // ------------------------- CONFIGURACIÓN -------------------------
+
+//20250409 Mario: Function not implemented yet
 function toggleSettings() {
+    alert("Función aún no implementada.");  // Puedes reemplazar esto con la lógica real
     /* Muestra/oculta el panel de configuración */
-    const settingsWindow = document.getElementById('settingsWindow');
-    settingsWindow.style.display = settingsWindow.style.display === 'block' ? 'none' : 'block';
+    //const settingsWindow = document.getElementById('settingsWindow');*\
+    //settingsWindow.style.display = settingsWindow.style.display === 'block' ? 'none' : 'block';*\
 }
 
-function closeSettings() {
-    /* Cierra el panel de configuración */
-    document.getElementById('settingsWindow').style.display = 'none';
-}
 
-function applySettings() {
-    /* Aplica los cambios de configuración (tamaño de etiquetas) */
-    const newScaleFactor = parseFloat(document.getElementById('labelSize').value) / 100;
-
-    if (isNaN(newScaleFactor) || newScaleFactor <= 0) {
-        alert("Por favor, introduce un valor válido para el tamaño de las etiquetas.");
-        return;
-    }
-
-    // Actualizar únicamente el radio de las etiquetas
-    SCALE_FACTOR = newScaleFactor;
-    CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
-
-    // Redibujar las etiquetas con el nuevo tamaño
-    drawLabels();
-
-    // Cerrar la ventana de configuración
-    closeSettings();
-}
+//function closeSettings() {
+//    /* Cierra el panel de configuración */
+//    document.getElementById('settingsWindow').style.display = 'none';
+//}
+//
+//function applySettings() {
+//    /* Aplica los cambios de configuración (tamaño de etiquetas) */
+//    const newScaleFactor = parseFloat(document.getElementById('labelSize').value) / 100;
+//
+//    if (isNaN(newScaleFactor) || newScaleFactor <= 0) {
+//        alert("Por favor, introduce un valor válido para el tamaño de las etiquetas.");
+//        return;
+//    }
+//
+//    // Actualizar únicamente el radio de las etiquetas
+//    SCALE_FACTOR = newScaleFactor;
+//    CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
+//
+//    // Redibujar las etiquetas con el nuevo tamaño
+//    drawLabels();
+//
+//    // Cerrar la ventana de configuración
+//    closeSettings();
+//}
 
 // Inicializar visualización del tamaño de etiqueta
 document.getElementById('labelSize').addEventListener('input', function() {
