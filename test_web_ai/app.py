@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 # Carga del modelo YOLO (ruta específica al archivo de pesos)
 try:
-    model = YOLO("../runs/train2/weights/best.pt")
+    model = YOLO("yolov12l.pt")
     logger.info("Modelo YOLO cargado correctamente")
 except Exception as e:
     logger.error(f"Error al cargar el modelo YOLO: {str(e)}")
@@ -61,7 +61,7 @@ class DetectionUtils:
             with open(label_path, 'w') as f:
                 for detection in detections:
                     x_center, y_center, width, height = detection
-                    f.write(f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")  # Formato YOLO
+                    f.write(f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}/n")  # Formato YOLO
             
             return label_path
         except Exception as e:
@@ -132,8 +132,8 @@ def generate_frames():
                 continue
             ret, buffer = cv2.imencode('.jpg', camera_frame)
             frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            yield (b'--frame/r/n'
+                   b'Content-Type: image/jpeg/r/n/r/n' + frame + b'/r/n')
 
 def capture_frame():
     """Captura un frame de la cámara"""
