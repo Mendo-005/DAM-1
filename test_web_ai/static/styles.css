@@ -1,107 +1,130 @@
-/* Estilo general */
+/* Estilos generales */
 body {
     font-family: 'Arial', sans-serif;
     background-color: #333232;
     color: white;
-    text-align: center;
-    margin: 20px;
-    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
 }
 
-/* Títulos */
-h1, h2 {
+/* Barra lateral izquierda */
+.sidebar {
+    width: 80px;
+    background-color: #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 20px 0;
+    gap: 30px;
+}
+
+.tool-buttons, .input-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.sidebar button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.sidebar img.icon {
+    width: 40px;
+    height: 40px;
+    transition: transform 0.2s;
+}
+
+.sidebar img.icon:hover {
+    transform: scale(1.1);
+}
+
+/* Contenido principal */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+
+/* Controles superiores */
+.top-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #3a3a3a;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.label-counter {
+    font-size: 18px;
+    font-weight: bold;
     color: #e0b011;
 }
 
-/* Botones */
-button {
+.navigation-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.navigation-buttons button {
     background-color: #e0b011;
     border: none;
     color: white;
-    padding: 12px 20px;
-    margin: 10px;
-    font-size: 16px;
-    cursor: pointer;
+    padding: 8px 15px;
     border-radius: 5px;
+    cursor: pointer;
     transition: 0.3s;
 }
 
-button:hover {
+.navigation-buttons button:hover {
     background-color: #f0c020;
-    transform: scale(1.05);
 }
 
-/* Contenedor de botones (Izquierda) */
-.left-buttons-container {
-    position: fixed;
-    left: 20px;
-    top: 50px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    max-width: 150px; /* Limitar el ancho máximo del contenedor */
-}
-
-/* Botones con iconos */
-button img.icon {
-    width: 30px;
-    height: 30px;
-    vertical-align: middle;
-}
-
-/* Contenedor del canvas */
-.canvas-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    margin: 20px auto;
-    max-width: 90%;
-    max-height: 90vh;
-}
-
-/* Canvas (Imagen original) */
-#canvas {
-    width: 75%; 
-    height: auto; 
-    max-width: 100%; 
-    border: 1px solid #e0b011;
-    background-color: rgba(255, 238, 190, 0.842);
-    cursor: crosshair;
-    object-fit: contain;
-    margin: 0 auto; /* Centrar el canvas */
-}
-
-/* Contenedor de botones de procesamiento */
-.processing-buttons-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px; 
-    margin-top: 30px; 
-    padding: 10px; 
-}
-
-/* Botón de guardar */
 .save-button {
-    right: 300px;
-    position: absolute;
-    justify-content: end;
-    background-color: #e0b011;
-    border: none;
-    color: white;
-    padding: 12px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: 0.3s;
+    background-color: #4CAF50 !important;
 }
 
 .save-button:hover {
-    background-color: #f0c020;
+    background-color: #45a049 !important;
 }
 
-/* Contenedor de la cámara */
+/* Canvas */
+.canvas-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: auto;
+    background-color: rgba(255, 238, 190, 0.842); /* SOLO aquí debe estar el color */
+    border-radius: 8px;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+}
+
+#canvas {
+    background-color: transparent !important; /* Asegura que el canvas sea transparente */
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    cursor: crosshair;
+    display: block;
+    margin: 0 auto;
+    background-color: rgba(255, 238, 190, 0.842);
+}
+
+/* Estilos para la cámara */
 #webcam-container {
     display: none;
     position: fixed;
@@ -231,31 +254,128 @@ button img.icon {
     background-color: #f0c020;
 }
 
+/* Estilos para los botones de la barra lateral */
+.sidebar button {
+    background: #3a3a3a;
+    border: none;
+    padding: 12px;
+    cursor: pointer;
+    border-radius: 8px;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.sidebar button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.sidebar button:active {
+    transform: translateY(0);
+}
+
+.sidebar img.icon {
+    width: 30px;
+    height: 30px;
+    filter: invert(85%) sepia(30%) saturate(300%) hue-rotate(5deg);
+    transition: all 0.3s ease;
+}
+
+.sidebar button:hover img.icon {
+    filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg);
+}
+
+/* Estilos para los botones de navegación */
+.navigation-buttons button {
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    min-width: 100px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.navigation-buttons button:hover {
+    background-color: #f0c020;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.navigation-buttons button:active {
+    transform: translateY(0);
+}
+
+.navigation-buttons img.icon {
+    width: 20px;
+    height: 20px;
+    filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg);
+}
+
+/* Botón de guardar especial */
+.save-button {
+    background-color: #4CAF50 !important;
+    min-width: 100px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.save-button:hover {
+    background-color: #45a049 !important;
+}
+
+/* Botones en diálogos */
+.dialog button {
+    min-width: 80px;
+    height: 36px;
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Efecto para todos los botones */
+button {
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+
 /* Estilos responsivos */
 @media (max-width: 768px) {
-    .left-buttons-container {
-        flex-direction: row;
-        justify-content: center;
-        gap: 10px;
-        position: static;
-        margin-bottom: 20px;
+    body {
+        flex-direction: column;
     }
-
-    .processing-buttons-container {
+    
+    .sidebar {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 10px 0;
+    }
+    
+    .tool-buttons, .input-buttons {
+        flex-direction: row;
+        gap: 10px;
+    }
+    
+    .top-controls {
         flex-direction: column;
         gap: 10px;
     }
-
+    
     #canvas {
-        width: 95%;
-        height: auto;
+        max-height: calc(100vh - 200px);
     }
-}
-
-/* Contador de etiquetas */
-.label-counter {
-    margin-top: 10px;
-    text-align: right;
-    font-size: 18px;
-    font-weight: bold;
 }
