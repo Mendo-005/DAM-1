@@ -176,12 +176,11 @@ def capture_webcam():
         if img is None:
             return jsonify({"error": "Error al procesar la imagen"}), 400
 
-        processed_path = os.path.join(PROCESSED_FOLDER, filename)
-        cv2.imwrite(processed_path, img)
+        # Guardar solo etiquetas, NO la imagen procesada
         DetectionUtils.save_yolo_labels(filename, detections)
 
         return jsonify({
-            "image_url": f"/static/processed/{filename}",
+            "image_url": f"/uploads/{filename}",
             "labels": detections,
             "count": len(detections)
         })
@@ -205,11 +204,7 @@ def upload_file():
     if img is None:
         return jsonify({"error": "Error al cargar la imagen"}), 400
 
-    # Guardar resultados
-    processed_path = os.path.join(PROCESSED_FOLDER, filename)
-    cv2.imwrite(processed_path, img)
-    DetectionUtils.save_yolo_labels(filename, detections)
-
+    # No guardar etiquetas generadas automáticamente
     return jsonify({"image_url": f"/uploads/{filename}", "labels": detections})
 
 
@@ -220,9 +215,9 @@ def uploaded_file(filename):
 
 @app.route("/update_labels", methods=["POST"])
 def update_labels():
-    """Actualiza etiquetas manualmente desde frontend y renombra archivos"""
+    """Actualiza etiquetas manualmente desde frontend, renombra archivos y guarda el canvas modificado en processed"""
     data = request.get_json()
-    if not data or 'file' not in data or 'labels' not in data or 'originalImage' not in data:
+    if not data or 'file' not in data or 'labels' not in data or 'originalImage' not in data or 'canvas_image' not in data:
         return jsonify({"error": "Datos inválidos"}), 400
 
     try:
@@ -230,30 +225,35 @@ def update_labels():
         new_filename = secure_filename(data['file'])  # Nuevo nombre del archivo
         labels = data['labels']
         original_image = secure_filename(data['originalImage'])  # Nombre original del archivo
+        canvas_image = data['canvas_image']  # Imagen del canvas en base64
 
         # Rutas de los archivos
         original_path = os.path.join(UPLOAD_FOLDER, original_image)
         new_original_path = os.path.join(UPLOAD_FOLDER, new_filename)
-        processed_path = os.path.join(PROCESSED_FOLDER, original_image)
-        new_processed_path = os.path.join(PROCESSED_FOLDER, new_filename)
+        processed_path = os.path.join(PROCESSED_FOLDER, new_filename)
 
-        # Renombrar la imagen original
+        # Renombrar la imagen original solo si es necesario
         if os.path.exists(original_path):
             os.rename(original_path, new_original_path)
+        elif os.path.exists(new_original_path):
+            # Ya está renombrada, continuar
+            pass
         else:
-            return jsonify({"error": f"Archivo original no encontrado: {original_image}"}), 404
+            return jsonify({"error": f"Archivo original no encontrado: {original_image} ni {new_filename}"}), 404
 
-        # Renombrar la imagen procesada
-        if os.path.exists(processed_path):
-            os.rename(processed_path, new_processed_path)
+        # Guardar la imagen del canvas en processed
+        if canvas_image.startswith('data:image'):
+            header, image_data = canvas_image.split(',', 1)
         else:
-            return jsonify({"error": f"Archivo procesado no encontrado: {original_image}"}), 404
+            image_data = canvas_image
+        image_bytes = base64.b64decode(image_data)
+        with open(processed_path, 'wb') as f:
+            f.write(image_bytes)
 
         # Validar formato de las etiquetas
         formatted_labels = []
         for label in labels:
             if len(label) == 2:
-                # Si faltan width y height, agregar valores predeterminados
                 formatted_labels.append([label[0], label[1], 0.1, 0.1])
             elif len(label) == 4:
                 formatted_labels.append(label)
@@ -262,54 +262,55 @@ def update_labels():
 
         # Guardar etiquetas en el nuevo archivo
         label_path = DetectionUtils.save_yolo_labels(new_filename, formatted_labels)
-         
+
         return jsonify({
-            "message": "Etiquetas y archivos renombrados correctamente",
+            "message": "Etiquetas, archivos y canvas guardados correctamente",
             "new_image_url": f"/static/processed/{new_filename}",
             "label_path": label_path,
-            "count": len(labels)
+            "count": len(labels),
+            "original_image_url": f"/uploads/{new_filename}"
         })
     except Exception as e:
         logger.error(f"Error en update_labels: {str(e)}")
         return jsonify({"error": str(e)}), 500
     
 # ------------------------- RUTAS PARA GUARDAR IMÁGENES DESDE EL CANVAS -------------------------
-#@app.route('/save_canvas', methods=['POST'])
-#def save_canvas():
-#    """Guarda una imagen enviada desde el canvas (base64) en static/processed"""
-#    data = request.get_json()
-#    if not data or 'image' not in data:
-#        return jsonify({"error": "No se recibió la imagen"}), 400
-#
-#    image_data = data['image']
-#    filename = data.get('filename')
-#    try:
-#        # Extraer base64 puro si viene como data URL
-#        if image_data.startswith('data:image'):
-#            header, image_data = image_data.split(',', 1)
-#            ext = header.split('/')[1].split(';')[0]
-#        else:
-#            ext = 'png'
-#        if not filename:
-#            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-#            filename = f"canvas_{timestamp}.{ext}"
-#        else:
-#            filename = secure_filename(filename)
-#            if not filename.lower().endswith(f'.{ext}'):
-#                filename += f'.{ext}'
-#        processed_path = os.path.join(PROCESSED_FOLDER, filename)
-#        # Decodificar y guardar
-#        image_bytes = base64.b64decode(image_data)
-#        with open(processed_path, 'wb') as f:
-#            f.write(image_bytes)
-#        return jsonify({
-#            "message": "Imagen guardada correctamente",
-#            "image_url": f"/static/processed/{filename}"
-#        })
-#    
-#    except Exception as e:
-#        logger.error(f"Error guardando imagen de canvas: {str(e)}")
-#        return jsonify({"error": str(e)}), 500
+@app.route('/save_canvas', methods=['POST'])
+def save_canvas():
+    """Guarda una imagen enviada desde el canvas (base64) en static/processed"""
+    data = request.get_json()
+    if not data or 'image' not in data:
+        return jsonify({"error": "No se recibió la imagen"}), 400
+
+    image_data = data['image']
+    filename = data.get('filename')
+    try:
+        # Extraer base64 puro si viene como data URL
+        if image_data.startswith('data:image'):
+            header, image_data = image_data.split(',', 1)
+            ext = header.split('/')[1].split(';')[0]
+        else:
+            ext = 'png'
+        if not filename:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"canvas_{timestamp}.{ext}"
+        else:
+            filename = secure_filename(filename)
+            if not filename.lower().endswith(f'.{ext}'):
+                filename += f'.{ext}'
+        processed_path = os.path.join(PROCESSED_FOLDER, filename)
+        # Decodificar y guardar
+        image_bytes = base64.b64decode(image_data)
+        with open(processed_path, 'wb') as f:
+            f.write(image_bytes)
+        return jsonify({
+            "message": "Imagen guardada correctamente",
+            "image_url": f"/static/processed/{filename}"
+        })
+    
+    except Exception as e:
+        logger.error(f"Error guardando imagen de canvas: {str(e)}")
+        return jsonify({"error": str(e)}), 500
     
 
 if __name__ == "__main__":
