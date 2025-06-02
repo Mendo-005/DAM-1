@@ -421,6 +421,9 @@ function confirmSave() {
     // Cerrar el cuadro de diálogo
     closeSaveDialog();
 
+    // Capturar el canvas como imagen base64
+    let canvasImage = canvas.toDataURL('image/jpeg');
+
     // Enviar los datos al servidor para guardar etiquetas y renombrar imágenes
     fetch(`/update_labels`, {
         method: "POST",
@@ -428,9 +431,10 @@ function confirmSave() {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            file: newFileName,          // Nuevo nombre del archivo
-            labels: labels,             // Etiquetas
-            originalImage: currentImage // Nombre de la imagen original
+            file: newFileName,              // Nuevo nombre del archivo
+            labels: labels,                 // Etiquetas
+            originalImage: currentImage,    // Nombre de la imagen original
+            canvas_image: canvasImage       // Imagen del canvas en base64
         })
     })
     .then(response => response.json())
@@ -438,7 +442,17 @@ function confirmSave() {
         if (data.message) {
             // Actualizar el nombre de la imagen actual y procesada
             currentImage = newFileName;
-            originalImage.src = `/static/images/${newFileName}`; // Ruta de la imagen renombrada
+            // Usar la imagen original (sin boxes) como fondo del canvas
+            if (data.original_image_url) {
+                originalImage.src = data.original_image_url;
+            } else {
+                originalImage.src = `/uploads/${newFileName}`;
+            }
+            originalImage.onload = function () {
+                updateCanvasDimensions(originalImage);
+                ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                drawLabels();
+            };
             alert("Etiquetas y nombres de archivo guardados correctamente");
         } else {
             alert("Error al guardar etiquetas: " + data.error);
