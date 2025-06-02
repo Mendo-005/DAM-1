@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 # Carga del modelo YOLO (ruta específica al archivo de pesos)
 try:
-    model = YOLO("yolov12l.pt")
+    model = YOLO("../runs/train2/weights/best.pt")
     logger.info("Modelo YOLO cargado correctamente")
 except Exception as e:
     logger.error(f"Error al cargar el modelo YOLO: {str(e)}")
@@ -61,7 +61,7 @@ class DetectionUtils:
             with open(label_path, 'w') as f:
                 for detection in detections:
                     x_center, y_center, width, height = detection
-                    f.write(f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}/n")  # Formato YOLO
+                    f.write(f"0 {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")  # Formato YOLO
             
             return label_path
         except Exception as e:
@@ -132,8 +132,8 @@ def generate_frames():
                 continue
             ret, buffer = cv2.imencode('.jpg', camera_frame)
             frame = buffer.tobytes()
-            yield (b'--frame/r/n'
-                   b'Content-Type: image/jpeg/r/n/r/n' + frame + b'/r/n')
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 def capture_frame():
     """Captura un frame de la cámara"""
@@ -249,9 +249,20 @@ def update_labels():
         else:
             return jsonify({"error": f"Archivo procesado no encontrado: {original_image}"}), 404
 
-        # Guardar etiquetas en el nuevo archivo
-        label_path = DetectionUtils.save_yolo_labels(new_filename, labels)
+        # Validar formato de las etiquetas
+        formatted_labels = []
+        for label in labels:
+            if len(label) == 2:
+                # Si faltan width y height, agregar valores predeterminados
+                formatted_labels.append([label[0], label[1], 0.1, 0.1])
+            elif len(label) == 4:
+                formatted_labels.append(label)
+            else:
+                return jsonify({"error": "Formato de etiquetas inválido"}), 400
 
+        # Guardar etiquetas en el nuevo archivo
+        label_path = DetectionUtils.save_yolo_labels(new_filename, formatted_labels)
+         
         return jsonify({
             "message": "Etiquetas y archivos renombrados correctamente",
             "new_image_url": f"/static/processed/{new_filename}",
@@ -261,6 +272,45 @@ def update_labels():
     except Exception as e:
         logger.error(f"Error en update_labels: {str(e)}")
         return jsonify({"error": str(e)}), 500
+    
+# ------------------------- RUTAS PARA GUARDAR IMÁGENES DESDE EL CANVAS -------------------------
+#@app.route('/save_canvas', methods=['POST'])
+#def save_canvas():
+#    """Guarda una imagen enviada desde el canvas (base64) en static/processed"""
+#    data = request.get_json()
+#    if not data or 'image' not in data:
+#        return jsonify({"error": "No se recibió la imagen"}), 400
+#
+#    image_data = data['image']
+#    filename = data.get('filename')
+#    try:
+#        # Extraer base64 puro si viene como data URL
+#        if image_data.startswith('data:image'):
+#            header, image_data = image_data.split(',', 1)
+#            ext = header.split('/')[1].split(';')[0]
+#        else:
+#            ext = 'png'
+#        if not filename:
+#            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+#            filename = f"canvas_{timestamp}.{ext}"
+#        else:
+#            filename = secure_filename(filename)
+#            if not filename.lower().endswith(f'.{ext}'):
+#                filename += f'.{ext}'
+#        processed_path = os.path.join(PROCESSED_FOLDER, filename)
+#        # Decodificar y guardar
+#        image_bytes = base64.b64decode(image_data)
+#        with open(processed_path, 'wb') as f:
+#            f.write(image_bytes)
+#        return jsonify({
+#            "message": "Imagen guardada correctamente",
+#            "image_url": f"/static/processed/{filename}"
+#        })
+#    
+#    except Exception as e:
+#        logger.error(f"Error guardando imagen de canvas: {str(e)}")
+#        return jsonify({"error": str(e)}), 500
+    
 
 if __name__ == "__main__":
     init_camera()  # Inicializar la cámara al iniciar el servidor
