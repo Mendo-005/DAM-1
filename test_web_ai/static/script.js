@@ -7,17 +7,27 @@ let canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");               
 let imageFiles = [];         
 let currentIndex = 0;        
-let webcamStream = null;     // Para controlar el stream de la cámara
-let webcamVideo = document.createElement('video'); // Elemento video para la cámara
+let webcamStream = null;     
+let webcamVideo = document.createElement('video'); 
+
+function updateNavigationButtons(enabled) {
+    const prevButton = document.querySelector("button[onclick='previousImage()']");
+    const nextButton = document.querySelector("button[onclick='nextImage()']");
+    if (prevButton) prevButton.disabled = !enabled;
+    if (nextButton) nextButton.disabled = !enabled;
+}
+
+// Desactivar botones de navegación al inicio
+updateNavigationButtons(false);
 
 // Configuración de etiquetas
-const labelRadius = 45; // Radio base de las etiquetas
-let SCALE_FACTOR = 1; // Factor de escala inicial
+const labelRadius = 45;      
+let SCALE_FACTOR = 0.25;     
 let CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
 
-// Dimensiones base del canvas al iniciar la web
-let IMAGE_WIDTH = 800; // Ancho inicial del canvas
-let IMAGE_HEIGHT = 400; // Alto inicial del canvas
+// Dimensiones iniciales del canvas
+let IMAGE_WIDTH = 1008;      
+let IMAGE_HEIGHT = 756;      
 let CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
 let CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
 
@@ -25,50 +35,295 @@ let CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
 
-let originalImage = new Image();  // Objeto Image para cargar las imágenes
+let originalImage = new Image();  
 
-// Función para actualizar las dimensiones del canvas según la imagen seleccionada
+// Función para actualizar las dimensiones del canvas según la imagen
 function updateCanvasDimensions(image) {
-    IMAGE_WIDTH = image.naturalWidth; // Ancho real de la imagen
-    IMAGE_HEIGHT = image.naturalHeight; // Alto real de la imagen
+    IMAGE_WIDTH = image.naturalWidth; 
+    IMAGE_HEIGHT = image.naturalHeight; 
+    
+    // Calcular el factor de escala manteniendo la proporción
+    const scaleX = 1008 / IMAGE_WIDTH;  // 1008 es el ancho objetivo
+    const scaleY = 756 / IMAGE_HEIGHT;  // 756 es el alto objetivo
+    SCALE_FACTOR = Math.min(scaleX, scaleY);  // Usar el menor para no distorsionar
+    
+    // Actualizar dimensiones del canvas
     CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
     CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
-
-    // Actualizar las dimensiones del canvas
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
 
-    // Recalcular el tamaño de las etiquetas en función del nuevo tamaño del canvas
-    CANVAS_LABEL = Math.round(labelRadius * (CANVAS_WIDTH / IMAGE_WIDTH));
+    // Mantener el tamaño de las etiquetas proporcional
+    CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
 }
 
-// ------------------------- FUNCIONES DE CÁMARA WEB -------------------------
-async function toggleWebcam() {
-    const webcamContainer = document.getElementById('webcam-container');
-    const webcamButton = document.getElementById('webcam-button');
+// Helper function to parse barcode
+function parseBarcode(barcode) {
+    if (!barcode) return null;
+    // Normalize barcode: trim whitespace and replace single quotes with dashes
+    barcode = barcode.trim().replace(/'/g, '-');
     
+    const parts = barcode.split('-');
+    if (parts.length !== 3) return null;
+    const [seccion, rolado, nr_unico] = parts;
+    if (!seccion || !rolado || !nr_unico || isNaN(nr_unico)) return null;
+    return { seccion, rolado, nr_unico };
+}
+
+// Function to update fields based on barcode input
+function updateFields() {
+    const barcodeInput = document.getElementById('barcodeInput');
+    if (!barcodeInput) {
+        console.error("barcodeInput element not found");
+        return;
+    }
+    const barcodeData = parseBarcode(barcodeInput.value);
+    
+    if (barcodeData) {
+        const seccionField = document.getElementById('seccion');
+        const roladoField = document.getElementById('rolado');
+        const nrUnicoField = document.getElementById('nr_unico');
+        
+        if (seccionField && roladoField && nrUnicoField) {
+            seccionField.value = barcodeData.seccion;
+            roladoField.value = barcodeData.rolado;
+            nrUnicoField.value = barcodeData.nr_unico;
+        } else {
+            console.error("One or more fields (seccion, rolado, nr_unico) not found");
+        }
+        
+        // Set current date for date fields if they are empty
+        const dateFields = ['date_prod', 'date_control'];
+        const today = new Date().toISOString().split('T')[0];
+        
+        dateFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field && !field.value) {
+                field.value = today;
+            }
+        });
+    }
+}
+
+// ------------------------- FUNCIONES GENERALES -------------------------
+function runPythonScript() {
+    $("#settingsWindow").show("slow");  
+}
+
+function clearCanvas() {
+    if (confirm("¿Estás seguro de que deseas limpiar el canvas por completo?")) { 
+        labels = [];
+        imageFiles = [];
+        currentImage = '';
+        originalImage = new Image();
+        SCALE_FACTOR = 0.25; 
+        IMAGE_WIDTH = 1008;
+        IMAGE_HEIGHT = 756;
+        CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
+        CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        document.getElementById('imageInput').value = '';
+        document.getElementById('folderInput').value = '';
+        document.getElementById('processedImageInput').value = '';
+        document.getElementById('current_image').innerHTML = "[Nombre de la Imagen]";
+        document.getElementById('labelSize').value = 25; // Reset label size to default
+        document.getElementById('labelSizeValue').textContent = '25 px'; // Update display
+        deleteMode = false;
+        addMode = false;
+        updateLabelCounter();
+        updateNavigationButtons(false);
+    }
+}
+
+// ------------------------- CARGA DE IMÁGENES -------------------------
+function selectImage() {
+    if (currentImage !== '') {
+        if (!confirm("Esto borrará la imagen actual y sus etiquetas. ¿Deseas continuar?")) {
+            return;
+        }
+        clearCanvas();
+    }
+    const imageInput = document.getElementById('imageInput');
+    imageInput.click();
+    imageInput.addEventListener('change', function () {
+        const file = imageInput.files[0];
+        if (!file || !file.type.startsWith('image/')) {
+            alert("Por favor selecciona un archivo de imagen válido");
+            return;
+        }
+        imageFiles = [file]; 
+        currentIndex = 0;
+        updateNavigationButtons(false);
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            originalImage.src = event.target.result;
+            originalImage.onload = function() {
+                updateCanvasDimensions(originalImage);
+                ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                currentImage = file.name;
+                labels = [];
+                document.getElementById('current_image').innerHTML = "Imagen Seleccionada: " + file.name;
+                drawLabels();
+            };
+        };
+        reader.readAsDataURL(file);
+    }, { once: true });
+}
+
+function selectFolder() {
+    if (currentImage !== '') {
+        if (!confirm("Esto borrará la imagen actual y sus etiquetas. ¿Deseas continuar?")) {
+            return;
+        }
+        clearCanvas();
+    }
+    const folderInput = document.getElementById('folderInput');
+    folderInput.click();
+    folderInput.addEventListener('change', function () {
+        const files = Array.from(folderInput.files);
+        imageFiles = files.filter(file => file.type.startsWith('image/'));
+        if (imageFiles.length === 0) {
+            alert("No se encontraron imágenes en la carpeta seleccionada.");
+            updateNavigationButtons(false);
+            return;
+        }
+        currentIndex = 0;
+        loadImage(imageFiles[currentIndex]);
+        updateNavigationButtons(true);
+        folderInput.value = '';
+    }, { once: true });
+}
+
+function loadImage(file) {
+    const reader = new FileReader();
+    reader.onload = function (event) {
+        originalImage.src = event.target.result;
+        originalImage.onload = function () {
+            updateCanvasDimensions(originalImage);
+            ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            currentImage = file.name;
+            labels = [];
+            document.getElementById('current_image').innerHTML = "Imagen Seleccionada: " + file.name;
+            drawLabels();
+        };
+    };
+    reader.readAsDataURL(file);
+}
+
+function loadProcessedImage() {
+    if (currentImage !== '') {
+        if (!confirm("Esto borrará la imagen actual y sus etiquetas. ¿Deseas continuar?")) {
+            return;
+        }
+        clearCanvas();
+    }
+    const processedInput = document.getElementById('processedImageInput');
+    processedInput.click();
+    processedInput.addEventListener('change', function () {
+        const file = processedInput.files[0];
+        if (!file || !file.type.startsWith('image/')) {
+            alert("Por favor selecciona un archivo de imagen válido");
+            return;
+        }
+        const fileName = file.name.split('.').slice(0, -1).join('.'); // Remove extension
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            originalImage.src = event.target.result;
+            originalImage.onload = function() {
+                updateCanvasDimensions(originalImage);
+                ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                currentImage = file.name; 
+                document.getElementById('current_image').innerHTML = "Imagen Seleccionada: " + file.name;
+                
+                
+                // Fetch the associated label file from /labels/
+                fetch(`/labels/${fileName}.txt`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('No se encontró el archivo de etiquetas');
+                        }
+                            return response.text();
+                        })
+                    .then(text => {
+                        // Parsear formato YOLO plano
+                        labels = [];
+                        const lines = text.split('\n');
+                        for (let line of lines) {
+                            line = line.trim();
+                            if (!line || !line.startsWith('0 ')) continue;
+                            const parts = line.split(/\s+/);
+                            if (parts.length >= 3) {
+                                const x = parseFloat(parts[1]);
+                                const y = parseFloat(parts[2]);
+                                if (!isNaN(x) && !isNaN(y)) {
+                                    labels.push([x, y]);
+                                }
+                            }
+                        }
+                        drawLabels();
+                    })
+                    .catch(error => {
+                        console.error("Error al cargar etiquetas:", error);
+                        labels = [];
+                        drawLabels();
+                        alert("No se pudo cargar el archivo de etiquetas. Se cargó la imagen sin etiquetas.");
+                    });
+            };
+        };
+        reader.readAsDataURL(file);
+    }, { once: true });
+}
+
+function previousImage() {
+    if (imageFiles.length === 0) {
+        return;
+    }
+    if (currentIndex === 0) {
+        return;
+    }
+    currentIndex = (currentIndex - 1 + imageFiles.length) % imageFiles.length;
+    loadImage(imageFiles[currentIndex]);
+}
+
+function nextImage() {
+    if (imageFiles.length === 0) {
+        return;
+    }
+    currentIndex = (currentIndex + 1) % imageFiles.length;
+    loadImage(imageFiles[currentIndex]);
+}
+
+// ------------------------- CÁMARA WEB -------------------------
+async function toggleWebcam() {
+    if (currentImage !== '') {
+        if (!confirm("Esto borrará la imagen actual y sus etiquetas. ¿Deseas continuar?")) {
+            return;
+        }
+        clearCanvas();
+    }
+    const webcamContainer = document.getElementById('webcam-container');
     if (webcamStream) {
-        // Apagar la cámara
         webcamStream.getTracks().forEach(track => track.stop());
         webcamStream = null;
-        webcamContainer.style.display = 'none';
         webcamVideo.srcObject = null;
+        $("#webcam-container").hide("slow");
+        $("#canvas").show("slow");
+        updateButtons4CameraStatus(false);
     } else {
-        // Encender la cámara
         try {
             webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
             webcamVideo.srcObject = webcamStream;
             webcamVideo.play();
-            
-            webcamContainer.style.display = 'block';
-            
-            // Ajustar el tamaño del video
+            $("#canvas").hide("slow");
+            $("#webcam-container").show("slow");
             webcamVideo.onloadedmetadata = () => {
                 const videoWidth = webcamVideo.videoWidth;
                 const videoHeight = webcamVideo.videoHeight;
                 const aspectRatio = videoWidth / videoHeight;
-                
-                // Ajustar para que se vea bien en el contenedor
                 const container = document.getElementById('webcam-preview-container');
                 if (container) {
                     container.style.width = '640px';
@@ -78,11 +333,24 @@ async function toggleWebcam() {
                     console.warn("El contenedor 'webcam-preview-container' no existe.");
                 }
             };
+            updateButtons4CameraStatus(true);
         } catch (err) {
             console.error("Error al acceder a la cámara:", err);
             alert("No se pudo acceder a la cámara. Asegúrate de permitir el acceso.");
+            $("#canvas").show("slow");
+            updateButtons4CameraStatus(false);
         }
     }
+}
+
+function updateButtons4CameraStatus(bStatus) {
+    document.querySelectorAll("button").forEach(button => {
+        if (!button.id.startsWith("Webcam_")) {
+            button.disabled = bStatus;
+        } else {
+            button.disabled = !bStatus;
+        }
+    });
 }
 
 function capturePhoto() {
@@ -90,210 +358,125 @@ function capturePhoto() {
         alert("La cámara no está activada");
         return;
     }
-
-    // Crear un canvas temporal para capturar la foto
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     
-    // Establecer el tamaño del canvas temporal
-    tempCanvas.width = webcamVideo.videoWidth;
-    tempCanvas.height = webcamVideo.videoHeight;
+    // Mantener la proporción 4:3 (1008:756)
+    const targetWidth = 1008;
+    const targetHeight = 756;
     
-    // Dibujar el frame actual del video en el canvas
-    tempCtx.drawImage(webcamVideo, 0, 0, tempCanvas.width, tempCanvas.height);
+    // Calcular dimensiones manteniendo la proporción
+    const videoRatio = webcamVideo.videoWidth / webcamVideo.videoHeight;
+    const targetRatio = targetWidth / targetHeight;
     
-    // Convertir a blob y procesar como una imagen normal
+    let finalWidth, finalHeight;
+    if (videoRatio > targetRatio) {
+        // El video es más ancho que lo deseado
+        finalHeight = targetHeight;
+        finalWidth = targetHeight * videoRatio;
+    } else {
+        // El video es más alto que lo deseado
+        finalWidth = targetWidth;
+        finalHeight = targetWidth / videoRatio;
+    }
+    
+    tempCanvas.width = finalWidth;
+    tempCanvas.height = finalHeight;
+    tempCtx.drawImage(webcamVideo, 0, 0, finalWidth, finalHeight);
     tempCanvas.toBlob(async (blob) => {
         const file = new File([blob], `webcam_${Date.now()}.jpg`, { type: 'image/jpeg' });
-        
-        // Simular un input file para usar la función existente
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         document.getElementById('imageInput').files = dataTransfer.files;
-        
-        // Procesar como una imagen subida normalmente
         uploadImage();
-        
-        // Apagar la cámara después de capturar
         toggleWebcam();
     }, 'image/jpeg', 0.95);
 }
 
-// ------------------------- FUNCIONES DE CARGA DE IMÁGENES -------------------------
-function selectImage() {
-    /* Abre el selector de archivos para elegir una imagen individual */
-    const imageInput = document.getElementById('imageInput');
-    imageInput.click();
-
-    imageInput.addEventListener('change', function () {
-        const file = imageInput.files[0];
-        if (!file || !file.type.startsWith('image/')) {
-            alert("Por favor selecciona un archivo de imagen válido.");
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            originalImage.src = event.target.result;
-            originalImage.onload = function () {
-                updateCanvasDimensions(originalImage);
-                ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-                ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-                currentImage = file.name;
-                labels = [];
-                drawLabels();
-            };
-        };
-        reader.readAsDataURL(file);
-    }, { once: true });
-}
-
-function selectFolder() {
-    /* Abre el selector de carpetas para cargar múltiples imágenes */
-    const folderInput = document.getElementById('folderInput');
-    folderInput.click();
-
-    folderInput.addEventListener('change', function () {
-        const files = Array.from(folderInput.files);
-        imageFiles = files.filter(file => file.type.startsWith('image/'));
-
-        if (imageFiles.length === 0) {
-            alert("No se encontraron imágenes en la carpeta seleccionada.");
-            return;
-        }
-
-        currentIndex = 0;
-        loadImage(imageFiles[currentIndex]);
-        folderInput.value = '';
-    }, { once: true });
-}
-
-function loadImage(file) {
-    /* Carga una imagen en el canvas */
-    const reader = new FileReader();
-    reader.onload = function (event) {
-        originalImage.src = event.target.result;
-        originalImage.onload = function () {
-            updateCanvasDimensions(originalImage);
-            ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-            currentImage = file.name;
-            labels = [];
-            drawLabels();
-        };
-    };
-    reader.readAsDataURL(file);
-}
-
-// ------------------------- NAVEGACIÓN ENTRE IMÁGENES -------------------------
-function previousImage() {
-    /* Muestra la imagen anterior en imageFiles */
-    if (imageFiles.length === 0) {
-        alert("No hay imágenes cargadas.");
-        return;
-    }
-    currentIndex = (currentIndex - 1 + imageFiles.length) % imageFiles.length;
-    loadImage(imageFiles[currentIndex]);
-}
-
-function nextImage() {
-    /* Muestra la siguiente imagen en imageFiles */
-    if (imageFiles.length === 0) {
-        alert("No hay imágenes cargadas.");
-        return;
-    }
-    currentIndex = (currentIndex + 1) % imageFiles.length;
-    loadImage(imageFiles[currentIndex]);
-}
-
-// ------------------------- FUNCIONES DE ETIQUETADO -------------------------
+// ------------------------- ETIQUETADO -------------------------
 function updateLabelCounter() {
-    const labelCounter = document.getElementById('label-counter');
-    labelCounter.textContent = `Total de etiquetas: ${labels.length}`;
+    const currentImageElement = document.getElementById('current_image');
+    if (currentImageElement) {
+        const baseText = currentImage ? `Imagen Seleccionada: ${currentImage}` : "[Nombre de la Imagen]";
+        currentImageElement.textContent = `${baseText} (Cigarros: ${labels.length})`;
+    }
 }
 
 function drawLabels() {
-    // Limpiar completamente el canvas primero
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Redibujar la imagen de fondo si existe
     if (originalImage && originalImage.complete) {
         ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
     } else {
-        // Si no hay imagen, dibujar fondo amarillo
         ctx.fillStyle = 'rgba(255, 238, 190, 0.842)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    
-    // Dibujar todas las etiquetas
     labels.forEach((label, index) => {
         const [x_center, y_center] = label;
         const x = x_center * canvas.width;
         const y = y_center * canvas.height;
-        
-        // Dibujar círculo
         ctx.beginPath();
         ctx.arc(x, y, CANVAS_LABEL, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
         ctx.fill();
         ctx.strokeStyle = '#000';
         ctx.stroke();
-        
-        // Dibujar número
         ctx.fillStyle = '#000';
         ctx.font = `${Math.round(CANVAS_LABEL / 2)}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText((index + 1).toString(), x, y);
     });
-    updateLabelCounter(); // Actualizar el contador de etiquetas
+    ctx.fillStyle = 'white';
+    ctx.fillRect(10, 5, canvas.width - 20, 35);    ctx.fillStyle = 'black';
+    ctx.font = '24px Arial';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const dt = new Date();
+    const date = dt.toLocaleDateString("es-ES", {year: "numeric", month: "long", day: "numeric"});
+    const time = dt.toLocaleTimeString("es-ES", {hour: "2-digit", minute: "2-digit"});
+    ctx.fillText(date + ' ' + time + ' - cantidad de cigarros ' + labels.length, 15, 25);
+    updateLabelCounter();
 }
 
-// ------------------------- MANEJO DE MODOS (AÑADIR/ELIMINAR) -------------------------
 function toggleDeleteMode() {
-    /* Alterna el modo de eliminación */
-    deleteMode = !deleteMode;
-    addMode = false;
-    updateButtonStyles();
-}
-
-function toggleAddMode() {
-    /* Alterna el modo de adición */
-    addMode = !addMode;
-    deleteMode = false;
-    updateButtonStyles();
-}
-
-function updateButtonStyles() {
-    /* Actualiza los estilos visuales de los botones según el modo activo */
-    const deleteBtn = document.querySelector("button[onclick='toggleDeleteMode()']");
-    const addBtn = document.querySelector("button[onclick='toggleAddMode()']");
-    
-    // Resetear colores
-    deleteBtn.style.backgroundColor = "#3a3a3a";
-    addBtn.style.backgroundColor = "#3a3a3a";
-    
-    // Aplicar colores según el modo activo
-    if (deleteMode) {
-        deleteBtn.style.backgroundColor = "#ff5050"; // Rojo para borrar
-    } 
-    if (addMode) {
-        addBtn.style.backgroundColor = "#50ff50"; // Verde para añadir
+    if (currentImage.length !== 0) {
+        deleteMode = !deleteMode;
+        addMode = false;
+        updateButtonStyles();
     }
 }
 
-// ------------------------- EVENTOS DEL CANVAS -------------------------
+function toggleAddMode() {
+    if (currentImage.length !== 0 ) {
+        addMode = !addMode;
+        deleteMode = false;
+        updateButtonStyles();
+    }
+}
+
+function updateButtonStyles() {
+    const deleteBtn = document.querySelector("button[onclick='toggleDeleteMode()']");
+    const addBtn = document.querySelector("button[onclick='toggleAddMode()']");
+    deleteBtn.style.backgroundColor = deleteMode ? "#ff5050" : "#909087";
+    addBtn.style.backgroundColor = addMode ? "#50ff50" : "#909087";
+}
+
+
+function undoLastLabel() {
+    if (labels.length > 0) {
+        labels.pop();
+        drawLabels();
+    }
+}
+
 canvas.addEventListener('click', function(event) {
-    /* Maneja los clicks en el canvas según el modo activo */
     const rect = canvas.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width;
     const y = (event.clientY - rect.top) / rect.height;
-
     if (addMode) {
-        // Modo añadir: agrega nueva etiqueta
         labels.push([x, y]);
         drawLabels();
     } else if (deleteMode) {
-        // Modo eliminar: quita etiquetas cercanas al click
         labels = labels.filter(label => {
             const [x_center, y_center] = label;
             const distance = Math.sqrt((x - x_center) ** 2 + (y - y_center) ** 2);
@@ -303,60 +486,21 @@ canvas.addEventListener('click', function(event) {
     }
 });
 
-// ------------------------- FUNCIONES DE UTILIDAD -------------------------
-function clearCanvas() {
-    if (confirm("¿Estás seguro de que deseas limpiar el canvas por completo?")) { 
-        labels = [];
-        imageFiles = [];
-        currentImage = '';
-        originalImage = new Image(); // <-- ¡IMPORTANTE! Resetear la imagen
-        
-        // Restablecer dimensiones iniciales
-        IMAGE_WIDTH = 800;
-        IMAGE_HEIGHT = 400;
-        CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
-        CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
-        canvas.width = CANVAS_WIDTH;
-        canvas.height = CANVAS_HEIGHT;
-        
-        
-        // Resetear inputs
-        document.getElementById('imageInput').value = '';
-        document.getElementById('folderInput').value = '';
-        updateLabelCounter();
-    }
-
-}
-
-function undoLastLabel() {
-    /* Elimina la última etiqueta añadida */
-    if (labels.length > 0) {
-        labels.pop();
-        drawLabels();
-    }
-}
-
 // ------------------------- COMUNICACIÓN CON EL SERVIDOR -------------------------
 function uploadImage() {
-    /* Envía la imagen al servidor para procesamiento con YOLO */
     let file;
-
-    // Si hay imágenes cargadas desde una carpeta, usa la actual
     if (imageFiles.length > 0 && currentIndex >= 0 && currentIndex < imageFiles.length) {
         file = imageFiles[currentIndex];
     } else {
-        // Si no, usa la imagen seleccionada individualmente
         const imageInput = document.getElementById("imageInput");
         if (imageInput.files.length === 0) {
-            alert("Selecciona una imagen");
+            alert("¡Selecciona una imagen!");
             return;
         }
         file = imageInput.files[0];
     }
-
     const formData = new FormData();
     formData.append("file", file);
-
     fetch("/upload", {
         method: "POST",
         body: formData
@@ -379,123 +523,205 @@ function uploadImage() {
     .catch(error => console.error("Error:", error));
 }
 
+// ------------------------- GUARDAR ETIQUETAS -------------------------
 function saveLabels() {
-    /* Muestra el cuadro de diálogo para introducir datos antes de guardar */
-    document.getElementById('saveDialog').style.display = 'block';
-    document.getElementById('overlay').style.display = 'block';
+    if (currentImage.length === 0) {
+        alert("¡Selecciona una imagen!");
+        return;
+    }
+    const dt = new Date();
+    const day = ("0" + dt.getDate()).slice(-2);
+    const month = ("0" + (dt.getMonth() + 1)).slice(-2);
+    const date = dt.getFullYear() + "-" + month + "-" + day;
+    document.getElementById('date_prod').value = date;
+    document.getElementById('date_control').value = date;
+    document.getElementById('seccion').value = '';
+    document.getElementById('rolado').value = '';
+    document.getElementById('nr_unico').value = '';
+    document.getElementById('barcodeInput').value = '';
+    document.getElementById('torcedor').value = 'xxxxx'; // Valor por defecto para torcedor    // Attach input event listener to barcodeInput
+    const barcodeInput = document.getElementById('barcodeInput');
+    if (barcodeInput) {
+        barcodeInput.addEventListener('input', updateFields);
+        $("#canvas").hide("slow");
+        $("#save-container").show("slow", function() {
+            barcodeInput.focus();
+        });
+    } else {
+        console.error("barcodeInput element not found");
+        $("#canvas").hide("slow");
+        $("#save-container").show("slow");
+    }
+    
+    updateButtons4Save(true);
 }
 
-function clearDialog() {
-    /* Limpia los campos del cuadro de diálogo */
-    if (confirm("¿Estás seguro de que deseas limpiar el cuadro por completo?")) { 
-    document.getElementById('drawerNumber').value = '';
-    document.getElementById('date').value = '';
-    document.getElementById('cepo').value = '';
-    document.getElementById('drawerNumber').focus();
+function updateButtons4Save(bStatus) {
+    document.querySelectorAll("button").forEach(button => {
+        if (!button.id.startsWith("Save_")) {
+            button.disabled = bStatus;
+        } else {
+            button.disabled = !bStatus;
+        }
+    });
+}
+
+function Save_Cancel() {
+    $("#save-container").hide("slow");
+    $("#canvas").show("slow");
+    updateButtons4Save(false);
+    // Remove event listener to prevent memory leaks
+    const barcodeInput = document.getElementById('barcodeInput');
+    if (barcodeInput) {
+        barcodeInput.removeEventListener('input', updateFields);
     }
 }
 
-function closeSaveDialog() {
-    /* Cierra el cuadro de diálogo sin guardar */
-    document.getElementById('saveDialog').style.display = 'none';
-    document.getElementById('overlay').style.display = 'none';
-}
-
-function confirmSave() {
-    /* Guarda las etiquetas con el nuevo nombre de archivo */
-    const drawerNumber = document.getElementById('drawerNumber').value.trim();
-    const date = document.getElementById('date').value.trim();
-    const cepo = document.getElementById('cepo').value.trim();
-
-    if (!drawerNumber || !date || !cepo) {
+function Save_Confirm() {
+    const date_prod = document.getElementById('date_prod').value.trim().split('-').join('');
+    const date_control = document.getElementById('date_control').value.trim().split('-').join('');
+    const rolado = document.getElementById('rolado').value.trim();
+    const seccion = document.getElementById('seccion').value.trim();
+    const nr_unico = document.getElementById('nr_unico').value.trim();
+    const torcedor = document.getElementById('torcedor').value.trim();
+      if (!date_prod || !date_control || !rolado || !seccion || !nr_unico || !torcedor) {
         alert("Por favor, completa todos los campos.");
+        $("#save-container").hide("slow");
+        $("#canvas").show("slow");
+        updateButtons4Save(false);
         return;
     }
 
-    // Convertir la fecha al formato ddmmaa
-    const formattedDate = date.split('-').reverse().join('').slice(0, 6);
+    const newFileName = `${date_prod}-${seccion}-${rolado}-${nr_unico}-${labels.length}.jpg`;
 
-    // Generar el nuevo nombre de archivo
-    const newFileName = `${drawerNumber}_${formattedDate}_${cepo}.jpg`;
-
-    // Cerrar el cuadro de diálogo
-    closeSaveDialog();
-
-    // Capturar el canvas como imagen base64
-    let canvasImage = canvas.toDataURL('image/jpeg');
-
-    // Enviar los datos al servidor para guardar etiquetas y renombrar imágenes
-    fetch(`/update_labels`, {
-        method: "POST",
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            file: newFileName,              // Nuevo nombre del archivo
-            labels: labels,                 // Etiquetas
-            originalImage: currentImage,    // Nombre de la imagen original
-            canvas_image: canvasImage       // Imagen del canvas en base64
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message) {
-            // Actualizar el nombre de la imagen actual y procesada
-            currentImage = newFileName;
-            // Usar la imagen original (sin boxes) como fondo del canvas
-            if (data.original_image_url) {
-                originalImage.src = data.original_image_url;
-            } else {
-                originalImage.src = `/uploads/${newFileName}`;
+    // Validar número único
+    fetch(`/check_unique_number?nr_unico=${encodeURIComponent(nr_unico)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                alert("El número único ya existe. Por favor, ingresa un número único diferente.");
+                $("#save-container").hide("slow");
+                $("#canvas").show("slow");
+                updateButtons4Save(false);
+                return;
             }
-            originalImage.onload = function () {
-                updateCanvasDimensions(originalImage);
-                ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-                drawLabels();
-            };
-            alert("Etiquetas y nombres de archivo guardados correctamente");
+
+            const canvasImage = canvas.toDataURL('image/jpeg');
+
+            fetch('/update_labels', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    file: newFileName,
+                    labels: labels,
+                    originalImage: currentImage,
+                    canvas_image: canvasImage,
+                    label_file: `labels/${newFileName.split('.').slice(0, -1).join('.')}.txt`
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    currentImage = newFileName;
+                    originalImage.src = data.original_image_url || `/Uploads/${newFileName}`;
+                    originalImage.onload = function () {
+                        updateCanvasDimensions(originalImage);
+                        ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                        drawLabels();
+                    };
+                    alert("Datos y nombres de archivo guardados correctamente");
+                } else {
+                    alert("Error al guardar etiquetas: " + (data.error || "Error desconocido"));
+                }
+            })
+            .catch(error => {
+                console.error("Error guardando etiquetas:", error);
+                alert("Error al guardar etiquetas: " + error.message);
+            })
+            .finally(() => {
+                $("#save-container").hide("slow");
+                $("#canvas").show("slow");
+                updateButtons4Save(false);
+                addMode = false;
+                deleteMode = false;
+                updateButtonStyles();
+                // Remove event listener
+                const barcodeInput = document.getElementById('barcodeInput');
+                if (barcodeInput) {
+                    barcodeInput.removeEventListener('input', updateFields);
+                }
+            });
+        })
+        .catch(error => {
+            console.error("Error validando número único:", error);
+            alert("Error validando número único: " + error.message);
+            $("#save-container").hide("slow");
+            $("#canvas").show("slow");
+            updateButtons4Save(false);
+        });
+}
+
+// ------------------------- IMPRESIÓN -------------------------
+function printLabel() {
+    if (currentImage.length === 0) {
+        alert("¡Selecciona una imagen!");
+        return;}
+
+    $("#print-container").show("slow");
+    $("#canvas").hide("slow");
+    updateButtons4Print(true);
+}
+
+function updateButtons4Print(bStatus) {
+    document.querySelectorAll("button").forEach(button => {
+        if (!button.id.startsWith("Print_")) {
+            button.disabled = bStatus;
         } else {
-            alert("Error al guardar etiquetas: " + data.error);
+            button.disabled = !bStatus;
         }
-    })
-    .catch(error => console.error("Error guardando etiquetas:", error));
+    });
+}
+
+function Print_Confirm() {
+    $("#print-container").hide("slow");
+    $("#canvas").show("slow");
+    updateButtons4Print(false);
+}
+
+function Print_Cancel() {
+    $("#print-container").hide("slow");
+    $("#canvas").show("slow");
+    updateButtons4Print(false);
 }
 
 // ------------------------- CONFIGURACIÓN -------------------------
-
-//20250409 Mario: Function not implemented yet
 function toggleSettings() {
-    alert("Función aún no implementada.");  // Puedes reemplazar esto con la lógica real
-    /* Muestra/oculta el panel de configuración */
-    //const settingsWindow = document.getElementById('settingsWindow');*\
-    //settingsWindow.style.display = settingsWindow.style.display === 'block' ? 'none' : 'block';*\
+    if (labels == null || labels.length === 0) {
+        alert("!No hay etiquetas para configurar. Por favor, añade etiquetas primero.");
+        return;}
+
+        $("#overlay").show();
+    $("#settingsWindow").show("slow");
 }
 
+function closeSettings() {
+    $("#settingsWindow").hide("slow");
+    $("#overlay").hide();
+}
 
-//function closeSettings() {
-//    /* Cierra el panel de configuración */
-//    document.getElementById('settingsWindow').style.display = 'none';
-//}
-//
-//function applySettings() {
-//    /* Aplica los cambios de configuración (tamaño de etiquetas) */
-//    const newScaleFactor = parseFloat(document.getElementById('labelSize').value) / 100;
-//
-//    if (isNaN(newScaleFactor) || newScaleFactor <= 0) {
-//        alert("Por favor, introduce un valor válido para el tamaño de las etiquetas.");
-//        return;
-//    }
-//
-//    // Actualizar únicamente el radio de las etiquetas
-//    SCALE_FACTOR = newScaleFactor;
-//    CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
-//
-//    // Redibujar las etiquetas con el nuevo tamaño
-//    drawLabels();
-//
-//    // Cerrar la ventana de configuración
-//    closeSettings();
-//}
+function applySettings() {
+    const newScaleFactor = parseFloat(document.getElementById('labelSize').value) / 100;
+    if (isNaN(newScaleFactor) || newScaleFactor <= 0) {
+        alert("Por favor, selecciona un valor válido para el tamaño de las etiquetas.");
+        return;
+    }
+    SCALE_FACTOR = newScaleFactor;
+    CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
+    drawLabels();
+    closeSettings();
+}
 
 // Inicializar visualización del tamaño de etiqueta
 document.getElementById('labelSize').addEventListener('input', function() {
