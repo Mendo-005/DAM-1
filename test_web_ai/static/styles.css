@@ -1,153 +1,553 @@
-/* Estilos generales */
+@charset "utf-8";
+
+.container {
+  max-width: 1200px;
+  min-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+header {
+	background-color: rgba(147,147,147,1.00);
+	padding-top: 2px;
+	padding-left: 2px;
+	padding-right: 4px;
+	padding-bottom: 2px;
+}
+
+nav {
+	float: right;
+}
+
 body {
-    font-family: 'Arial', sans-serif;
-    background-color: #333232;
-    color: white;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
+  font-family: 'Arial', sans-serif;
+  background-color: #f4a700;
+  color: white;
+  text-align: center;
+  margin: 0px;
+  overflow-x: hidden;
 }
 
-/* Barra lateral izquierda */
-.sidebar {
-    width: 80px;
-    background-color: #2a2a2a;
+/*******************************************************
+ * Anton de la Rambelje
+ * All styles for the main grid of teh page
+ ******************************************************/
+.mgrid {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: [first] 150px [line2] auto [end];
+  grid-template-rows: [row1-start] 35px [row2] 48px [row3] auto [end];
+  width: auto;
+  height: 715px;
+  text-align: center;
+  vertical-align: middle;
+  padding: 1px;
+}
+
+.mgrid_image_name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(147,147,147,1.00);
+  margin: 0px;
+  padding: 0px;
+  border: 0px solid white;
+  border-radius: 8px;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.mgrid_buttons {
+  height: 46px;
+  border: none;
+}
+
+.button_settings {
+  display: grid;
+  justify-content: center;
+  width: auto;
+  height: 46px;
+  text-align: center;
+  border : 1px solid white;
+  border-radius: 8px;
+}
+
+.buttons {
+  display: grid;
+  gap: 0px 1px;
+  grid-template-columns: minmax(125px,auto) minmax(125px,auto) minmax(125px,auto) minmax(125px,auto) minmax(125px,auto) minmax(125px,auto);
+  width: auto;
+  height: 46px;
+  text-align: center;
+  border : 1px solid white;
+  border-radius: 8px;
+}
+
+.mgrid_canvas_left {
+  width: auto;
+  height: auto;
+  justify-content: center;
+  border : 1px solid white;
+  border-radius: 8px;
+}
+
+.buttons_left {
+  display: grid;
+  justify-content: center;
+}
+
+.mgrid_canvas {
+  width: auto;
+  height: auto;
+  border: 1px solid white;
+  border-radius: 8px;
+}
+
+
+#tslu_logo {
+  width: 150px;
+  height: 56px;
+  margin: 0 0 0 0;
+  padding: 0 0 0 0;
+  border : 0 0 0 0;
+  float: right;
+  border-spacing: 0px 0px;
+}
+
+/* Style for the header DIV */ 
+#head {
+  display: inline-table;
+  width: 100%;
+  margin: 0 0 0 0;
+  padding: 1px 1px 1px 1px;
+  color: rgba(144,144,135,1.00);
+ }
+#head div {
+  display: table-cell;
+  padding: 1px 2px 1px 1px;
+  }
+  #head_logo {
+  width: 150px;
+  vertical-align: middle;
+  }
+  #head_title {
+  display: grid;
+  padding: 1px 4px 1px 1px;
+  align-items: center;
+  background: white;
+  border-radius: 8px;
+  font-size: 28px;
+  font-weight: bold;
+  vertical-align: middle;
+  text-align: center;
+  }
+
+/* Style for the buttons DIV */ 
+#ctrl_buttons  {
+  display: table;
+  width: 100%;
+  height: 50px;
+  margin: 0 0 0 0;
+  padding: 1px 1px 1px 1px;
+ }
+#ctrl_buttons div {
+  display: table-cell;
+  padding: 1px 4px 1px 1px;
+  }
+  #ctrl_buttons_left {
+  width: 150px;
+  vertical-align: middle;
+  }
+  #ctrl_buttons_main {
+  padding: 0px 0px 0px 0px;
+  vertical-align: middle;
+  text-align: centerleft;
+  border: 1px solid white;
+  border-radius: 8px;
+  }
+
+#select_image {
+  height: 24px;
+  padding: 1px 1px 1px 1px;
+  border: 1px solid white;
+  border-radius: 8px;
+  font-size: 22px;
+  font-weight: bold;
+  vertical-align: middle;
+  text-align: center;
+  }
+
+
+/* Títulos */
+h1, h2, h3 {
+  color: #0a0a0af6;
+  font-size: 20px;
+}
+
+/* Botones */
+button {
+  background-color: #909087;
+  border: none;
+  height: 34px;
+  width: 125px;
+  color: black;
+  padding: 0px;
+  margin: 5px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: 0.3s;
+}
+
+button:hover {
+    background-color: white;
+    transform: scale(1.10);
+}
+
+.input-container {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    padding: 20px 0;
-    gap: 30px;
-}
-
-.tool-buttons, .input-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.sidebar button {
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-}
-
-.sidebar img.icon {
-    width: 40px;
-    height: 40px;
-    transition: transform 0.2s;
-}
-
-.sidebar img.icon:hover {
-    transform: scale(1.1);
-}
-
-/* Contenido principal */
-.main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 10px;
-}
-
-/* Controles superiores */
-.top-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-    background-color: #3a3a3a;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-
-.label-counter {
-    font-size: 18px;
-    font-weight: bold;
-    color: #e0b011;
-}
-
-.navigation-buttons {
-    display: flex;
+    position: absolute;
+    left: 20px;
+    top: 570px;
     gap: 10px;
-    align-items: center;
 }
 
-.navigation-buttons button {
-    background-color: #e0b011;
-    border: none;
-    color: white;
-    padding: 8px 15px;
+/* Botones con iconos */
+button img.icon {
+    width: 30px;
+    height: 30px;
+    vertical-align: middle;
+    margin: 0px
+}
+
+/* Input de archivos */
+input[type="file"] {
+    padding: 10px;
     border-radius: 5px;
+    background-color: #333;
+    color: white;
+    border: none;
     cursor: pointer;
-    transition: 0.3s;
 }
 
-.navigation-buttons button:hover {
-    background-color: #f0c020;
-}
-
-.save-button {
-    background-color: #4CAF50 !important;
-}
-
-.save-button:hover {
-    background-color: #45a049 !important;
-}
-
-/* Canvas */
-.canvas-wrapper {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: auto;
-    background-color: rgba(255, 238, 190, 0.842); /* SOLO aquí debe estar el color */
-    border-radius: 8px;
-    position: relative;
-    width: 100%;
-    height: 100%;
-    margin: 0 auto;
-}
-
+/* Canvas (Imagen original) */
 #canvas {
-    background-color: transparent !important; /* Asegura que el canvas sea transparente */
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    cursor: crosshair;
-    display: block;
-    margin: 0 auto;
+    width: 1008px;   /* 25% de 4032 */
+    height: 715px;   /* 25% de 3024 */
+    border: 0px solid #e0b011;
     background-color: rgba(255, 238, 190, 0.842);
+    cursor: crosshair; /* Hace que el cursor sea una cruz */
+    margin: 0 auto;
+    display: block;
 }
 
-/* Estilos para la cámara */
-#webcam-container {
-    display: none;
+/* Imagen procesada */
+#processedImage {
+    border: 2px solid #e0b011;
+    border-radius: 10px;
+    display: block;
+    margin: 20px auto;
+    max-width: 80%;
+}
+
+/* Estilos para la ventana emergente */
+.settings-window {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 700px;
-    height: auto;
-    border: 2px solid #f0c020;
-    border-radius: 10px;
+    width: 300px;
     background: #444;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
+    color: white;
     z-index: 1000;
     text-align: center;
+    display: none;
+}
+
+.settings-window h2 {
+    margin-top: 0;
+    color: #e0b011;
+}
+
+/* Ajustar los inputs */
+.settings-window input {
+    width: 80%;
+    margin: 10px 0;
+}
+
+/* Botones dentro de la ventana */
+.settings-window button {
+    background-color: #909087;
+    border: none;
+    padding: 10px;
+    margin: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+    width: 100px;
+    font-size: 14px;
+    transition: 0.3s;
+    color: white;
+}
+
+.settings-window button:hover {
+    background-color: #f0c020;
+}
+
+/* ------------------------- ESTILOS PARA EL GUARDADO DE IMÁGENES ------------------------- */
+/* Estilos específicos para el contenedor de guardar */
+#save-container {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: auto; 
+  height: auto;
+  border: 2px solid #f0c020; 
+  border-radius: 8px;
+  background: linear-gradient(135deg, #444, #222); 
+  padding: 20px; 
+  text-align: center; 
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#save-container-form {
+  width: 100%; 
+  height: 100%;
+  overflow: hidden; 
+  margin: 0 auto; 
+  position: relative; 
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+}
+
+#save-dialog {
+  display: none; 
+  position: fixed; 
+  justify-content: center;
+  transform: translate(-50%, -50%); 
+  background: rgba(68, 68, 68, 0.9); 
+  padding: 20px; 
+  border-radius: 10px; 
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); 
+  z-index: 1000; 
+}
+
+#save-container h2 {
+  color: #f0c020; 
+  margin-bottom: 20px; 
+}
+
+/* Ajustes para evitar contradicciones */
+.save-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.save-dialog h2 {
+  color: #f0c020;
+  margin-bottom: 10px;
+  font-size: 1.8em;
+  text-align: center;
+}
+
+.save-dialog .input-section,
+.save-dialog .barcode-section,
+.save-dialog .data-section,
+.save-dialog .cigar-counts {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  width: 100%;
+}
+
+.save-dialog .input-section > div,
+.save-dialog .barcode-input,
+.save-dialog .data-group,
+.save-dialog .count-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.save-dialog label {
+  color: #f0c020;
+  font-weight: bold;
+  text-align: left;
+  margin-bottom: 5px;
+}
+
+.save-dialog input {
+  padding: 10px;
+  border: 1px solid #f0c020;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1em;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.save-dialog input[readonly] {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ccc;
+}
+
+.save-dialog .data-display {
+  min-height: 50px;
+  border: 1px solid #f0c020;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+  margin-top: 5px;
+}
+
+.save-dialog .cigar-counts {
+  margin-top: 10px;
+}
+
+.save-dialog .count-group {
+  align-items: center;
+}
+
+.save-dialog .count-group span {
+  font-size: 1.5em;
+  color: white;
+  font-weight: bold;
+  background-color: rgba(240, 192, 32, 0.2);
+  padding: 10px 20px;
+  border-radius: 4px;
+  min-width: 80px;
+  display: inline-block;
+}
+
+.save-dialog .button-group {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.save-dialog button {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+    font-size: 0.9em;
+    min-width: 150px;
+}
+
+.save-dialog #Save_Confirm,
+.save-dialog #Save_Cancel,
+.save-dialog #Print_Confirm,
+.save-dialog #Print_Save_Confirm {
+    transition: all 0.3s ease;
+}
+
+.save-dialog #Save_Confirm:hover,
+.save-dialog #Save_Cancel:hover,
+.save-dialog #Print_Confirm:hover,
+.save-dialog #Print_Save_Confirm:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+}
+
+.save-dialog #Save_Confirm {
+    background: #f0c020;
+  color: #222;
+}
+
+.save-dialog #Save_Cancel {
+    background: #f72424;
+  color: white;
+  border: 1px solid #f0c020;
+}
+
+.save-dialog #Print_Confirm {
+    background: #f0c020;
+  color: #222;
+}
+
+.save-dialog #Print_Save_Confirm {
+    background: #f0c020;
+    color: #222;
+    font-weight: bold;
+    padding: 12px 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    border: 2px solid #f0c020;
+    width: 200px;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .save-dialog .input-section,
+  .save-dialog .barcode-section,
+  .save-dialog .data-section {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  #save-container {
+    width: 95%;
+    padding: 15px;
+  }
+
+  .save-dialog {
+    padding: 15px;
+  }
+}
+
+.fabricate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(68, 68, 68, 0.9);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* ------------------------- ESTILOS PARA LA CÁMARA WEB ------------------------- */
+
+#webcam-container {
+  display: none; 
+  width: 1008px;
+  height: 715px;
+  background: #444; 
+  border: 2px ;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); 
+  padding: 20px; 
+  z-index: 1000; 
+  text-align: center;
+  margin: 0 auto;
 }
 
 #webcam-preview-container {
-    width: 640px;
-    height: 480px;
-    overflow: hidden;
-    margin: 0 auto 20px auto;
+    width: 960px !important;
+    height: 650px !important;
+    overflow: hidden; 
+    margin: 0 auto 20px auto; 
     position: relative;
+    border: 1px solid #f0c020;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 #webcam-preview-container video {
@@ -155,12 +555,28 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: auto;
-    height: 100%;
-    object-fit: cover;
 }
 
-/* Diálogo de guardar */
+#webcam-container button {
+    background-color: #909087; 
+    border: none;
+    height: 40px;
+    width: 125px;
+    color: black;
+    margin: 5px;
+    padding: 0px;
+    font-size: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+#webcam-container button:hover {
+  background-color: white;
+}
+
+
+/* ------------------------- Estilos para el cuadro de diálogo ------------------------- */
 .dialog {
     display: none;
     position: fixed;
@@ -189,16 +605,13 @@ body {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    background-color: #e0b011;
-    color: white;
-    transition: background-color 0.3s ease;
 }
 
 .dialog button:hover {
-    background-color: #f0c020;
+    background-color: #ddd;
 }
 
-/* Overlay */
+/* Estilos para el overlay */
 .overlay {
     display: none;
     position: fixed;
@@ -210,172 +623,48 @@ body {
     z-index: 999;
 }
 
-/* Ventana de configuración */
-.settings-window {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 300px;
-    background: #444;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
-    color: white;
-    z-index: 1000;
-    text-align: center;
-    display: none;
-}
-
-.settings-window h2 {
-    margin-top: 0;
-    color: #e0b011;
-}
-
-.settings-window input {
-    width: 80%;
-    margin: 10px 0;
-}
-
-.settings-window button {
-    background-color: #e0b011;
-    border: none;
-    padding: 10px;
-    margin: 5px;
-    cursor: pointer;
-    border-radius: 5px;
-    width: 100px;
-    font-size: 14px;
-    transition: 0.3s;
-    color: white;
-}
-
-.settings-window button:hover {
-    background-color: #f0c020;
-}
-
-/* Estilos para los botones de la barra lateral */
-.sidebar button {
-    background: #3a3a3a;
-    border: none;
-    padding: 12px;
-    cursor: pointer;
-    border-radius: 8px;
-    width: 56px;
-    height: 56px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-.sidebar button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-
-.sidebar button:active {
-    transform: translateY(0);
-}
-
-.sidebar img.icon {
-    width: 30px;
-    height: 30px;
-    filter: invert(85%) sepia(30%) saturate(300%) hue-rotate(5deg);
-    transition: all 0.3s ease;
-}
-
-.sidebar button:hover img.icon {
-    filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg);
-}
-
-/* Estilos para los botones de navegación */
-.navigation-buttons button {
-    border: none;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 600;
-    min-width: 100px;
-    height: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-.navigation-buttons button:hover {
-    background-color: #f0c020;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-
-.navigation-buttons button:active {
-    transform: translateY(0);
-}
-
-.navigation-buttons img.icon {
-    width: 20px;
-    height: 20px;
-    filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg);
-}
-
-/* Botón de guardar especial */
-.save-button {
-    background-color: #4CAF50 !important;
-    min-width: 100px;
-    height: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.save-button:hover {
-    background-color: #45a049 !important;
-}
-
-/* Botones en diálogos */
-.dialog button {
-    min-width: 80px;
-    height: 36px;
-    font-weight: 600;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-/* Efecto para todos los botones */
-button {
-    transition: all 0.3s ease;
-    outline: none;
-}
 
 
-/* Estilos responsivos */
-@media (max-width: 768px) {
-    body {
-        flex-direction: column;
-    }
-    
-    .sidebar {
-        width: 100%;
-        flex-direction: row;
-        justify-content: space-around;
-        padding: 10px 0;
-    }
-    
-    .tool-buttons, .input-buttons {
-        flex-direction: row;
-        gap: 10px;
-    }
-    
-    .top-controls {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
+/* ------------------------- ESTILOS RESPONSIVOS ------------------------- */
+@media (max-width: 1200px) {
     #canvas {
-        max-height: calc(100vh - 200px);
+  width: 100%;
+  height: 100%;
+  max-width: 967px;
+  min-width: 967px;
+  max-height: 725px;
+  min-height: 725px;
+    }
+
+    
+    .button-container, .input-container {
+        position: relative;
+        left: auto;
+        top: auto;
+        flex-direction: row;
+        justify-content: center;
+        margin: 20px 0;
+    }
+    
+    .save-button {
+        position: relative;
+        bottom: auto;
+        right: auto;
+        margin-top: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    #canvas {
+        width: 95%;
+    }
+    
+    .webcam-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .webcam-btn {
+        width: 200px;
     }
 }
