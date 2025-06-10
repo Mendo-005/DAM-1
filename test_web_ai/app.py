@@ -1,4 +1,8 @@
-from flask import Flask, render_template, request, jsonify, send_file, Response
+from flask import Flask, request, jsonify, send_from_directory, render_template_string, Response
+from flask_cors import CORS  # <-- Importa el módulo
+ #--------
+#from flask import Flask, render_template, request, jsonify, send_file, Response
+#from flask_cors import CORS  # <-- Importa el módulo para CORS
 from werkzeug.utils import secure_filename
 from ultralytics import YOLO
 import cv2
@@ -12,42 +16,64 @@ import logging
 from typing import List, Tuple, Optional
 import threading
 import time
+import shutil
+ #--------
 
-# Configuración inicial de Flask
-app = Flask(__name__, static_folder='static', template_folder='templates')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Límite de 16MB para uploads
+# Start Flask
+app = Flask(__name__)
+CORS(app)  # <-- Habilita CORS para todas las rutas y orígenes
 
+# Start custom code for the python app
+
+# Constant declaration
 # Directorios para almacenamiento
-UPLOAD_FOLDER = "uploads"  # Imágenes originales
-PROCESSED_FOLDER = os.path.join("static", "processed")  # Imágenes procesadas
+FOTO_FOLDER = "fotos_gavetas"  # Imágenes cargadas
+UPLOAD_FOLDER = "uploads"  # Imágenes cargadas
+PROCESSED_FOLDER = "processed"  # Imágenes procesadas
 LABELS_FOLDER = "labels"  # Archivos de etiquetas YOLO
-
-# Crear directorios si no existen
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
-os.makedirs(LABELS_FOLDER, exist_ok=True)
-
-# Configuración de logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Carga del modelo YOLO (ruta específica al archivo de pesos)
-try:
-    model = YOLO("../runs/train2/weights/best.pt")
-    logger.info("Modelo YOLO cargado correctamente")
-except Exception as e:
-    logger.error(f"Error al cargar el modelo YOLO: {str(e)}")
-    raise
+SAVE_FOLDER = "save"  # Carpeta para guardar imágenes desde el canvas
 
 # Constantes del sistema
 MIN_DISTANCE = 50  # Distancia mínima entre detecciones (en píxeles) para evitar duplicados
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}  # Formatos de imagen permitidos
 
+
+# Global Variable declaration
 # Variables globales para la cámara
 camera = None
 camera_frame = None
 camera_lock = threading.Lock()
 
+
+# Crear directorios si no existen
+os.makedirs(FOTO_FOLDER, exist_ok=True)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+os.makedirs(LABELS_FOLDER, exist_ok=True)
+os.makedirs(SAVE_FOLDER, exist_ok=True)
+
+# Configuración de logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+# Carga del modelo YOLO (ruta específica al archivo de pesos)
+try:
+    model = YOLO("I:/AI/data/test_web_ai/py/yolo_model/best.pt")  # Asegúrate de que la ruta sea correcta
+    logger.info("Modelo YOLO cargado correctamente")
+except Exception as e:
+    logger.error(f"Error al cargar el modelo YOLO: {str(e)}")
+    raise
+
+# End  custom code for the python app
+
+
+# post / get requests from the HTML/Javscript 
+@app.route('/api/saludar', methods=['GET'])
+def saludar():
+    return jsonify({"mensaje": "¡Hola Wagner ftb FLASK-CORS!"})
+
+# Endpoint para subir una imagen
 class DetectionUtils:
     """Clase utilitaria para operaciones de detección"""
     
@@ -148,8 +174,12 @@ def capture_frame():
 # ------------------------- RUTAS FLASK -------------------------
 @app.route('/')
 def index():
-    """Ruta principal: sirve la página HTML"""
-    return render_template('index.html')
+    with open("index.html") as f:
+        return render_template_string(f.read())
+
+@app.route('/<path:filename>')
+def static_files(filename):
+    return send_from_directory('.', filename)
 
 @app.route('/video_feed')
 def video_feed():
@@ -211,7 +241,43 @@ def upload_file():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     """Sirve archivos subidos directamente"""
-    return send_file(os.path.join(UPLOAD_FOLDER, filename))
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+@app.route('/labels/<path:filename>')
+def serve_label_file(filename):
+    """Sirve archivos de etiquetas desde la carpeta labels/"""
+    return send_from_directory(LABELS_FOLDER, filename)
+
+# Funciones para gestionar archivos
+def move_file_to_save_folder(original_path, new_filename):
+    """Mueve un archivo a la carpeta save/ y devuelve la nueva ruta"""
+    try:
+        save_path = os.path.join(SAVE_FOLDER, new_filename)
+        
+        # Si el archivo ya existe en save/, agregar sufijo numérico
+        counter = 1
+        base, ext = os.path.splitext(save_path)
+        while os.path.exists(save_path):
+            save_path = f"{base}_{counter}{ext}"
+            counter += 1
+        
+        shutil.move(original_path, save_path)
+        return save_path
+    except Exception as e:
+        logger.error(f"Error moviendo archivo a save/: {str(e)}")
+        return None
+
+def delete_file_from_uploads(filename):
+    """Elimina un archivo de la carpeta uploads/"""
+    try:
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Error eliminando archivo de uploads/: {str(e)}")
+        return False
 
 @app.route("/update_labels", methods=["POST"])
 def update_labels():
@@ -229,90 +295,76 @@ def update_labels():
 
         # Rutas de los archivos
         original_path = os.path.join(UPLOAD_FOLDER, original_image)
-        new_original_path = os.path.join(UPLOAD_FOLDER, new_filename)
-        processed_path = os.path.join(PROCESSED_FOLDER, new_filename)
-
-        # Renombrar la imagen original solo si es necesario
-        if os.path.exists(original_path):
-            os.rename(original_path, new_original_path)
-        elif os.path.exists(new_original_path):
-            # Ya está renombrada, continuar
-            pass
-        else:
-            return jsonify({"error": f"Archivo original no encontrado: {original_image} ni {new_filename}"}), 404
-
-        # Guardar la imagen del canvas en processed
+        
+        # 1. Mover la imagen original a la carpeta save/
+        save_path = move_file_to_save_folder(original_path, new_filename)
+        if not save_path:
+            return jsonify({"error": "No se pudo mover la imagen a la carpeta save"}), 500
+        
+        # 2. Guardar la imagen procesada en processed/
         if canvas_image.startswith('data:image'):
             header, image_data = canvas_image.split(',', 1)
         else:
             image_data = canvas_image
         image_bytes = base64.b64decode(image_data)
+        processed_path = os.path.join(PROCESSED_FOLDER, new_filename)
         with open(processed_path, 'wb') as f:
             f.write(image_bytes)
 
-        # Validar formato de las etiquetas
-        formatted_labels = []
-        for label in labels:
-            if len(label) == 2:
-                formatted_labels.append([label[0], label[1], 0.1, 0.1])
-            elif len(label) == 4:
-                formatted_labels.append(label)
-            else:
-                return jsonify({"error": "Formato de etiquetas inválido"}), 400
-
-        # Guardar etiquetas en el nuevo archivo
-        label_path = DetectionUtils.save_yolo_labels(new_filename, formatted_labels)
+        # 3. Guardar etiquetas en el nuevo archivo
+        label_path = DetectionUtils.save_yolo_labels(new_filename, labels)
 
         return jsonify({
             "message": "Etiquetas, archivos y canvas guardados correctamente",
             "new_image_url": f"/static/processed/{new_filename}",
             "label_path": label_path,
             "count": len(labels),
-            "original_image_url": f"/uploads/{new_filename}"
+            "original_image_url": f"/save/{os.path.basename(save_path)}"  # Nueva URL para la imagen original
         })
     except Exception as e:
         logger.error(f"Error en update_labels: {str(e)}")
         return jsonify({"error": str(e)}), 500
-    
-# ------------------------- RUTAS PARA GUARDAR IMÁGENES DESDE EL CANVAS -------------------------
-@app.route('/save_canvas', methods=['POST'])
-def save_canvas():
-    """Guarda una imagen enviada desde el canvas (base64) en static/processed"""
+
+# Nueva ruta para servir imágenes desde la carpeta save/
+@app.route('/save/<filename>')
+def save_file(filename):
+    """Sirve archivos guardados desde la carpeta save/"""
+    return send_from_directory(SAVE_FOLDER, filename)
+
+# Nueva ruta para eliminar imágenes de uploads/
+@app.route('/delete_uploaded_image', methods=['POST'])
+def delete_uploaded_image():
+    """Elimina una imagen de la carpeta uploads/"""
     data = request.get_json()
-    if not data or 'image' not in data:
-        return jsonify({"error": "No se recibió la imagen"}), 400
-
-    image_data = data['image']
-    filename = data.get('filename')
-    try:
-        # Extraer base64 puro si viene como data URL
-        if image_data.startswith('data:image'):
-            header, image_data = image_data.split(',', 1)
-            ext = header.split('/')[1].split(';')[0]
-        else:
-            ext = 'png'
-        if not filename:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"canvas_{timestamp}.{ext}"
-        else:
-            filename = secure_filename(filename)
-            if not filename.lower().endswith(f'.{ext}'):
-                filename += f'.{ext}'
-        processed_path = os.path.join(PROCESSED_FOLDER, filename)
-        # Decodificar y guardar
-        image_bytes = base64.b64decode(image_data)
-        with open(processed_path, 'wb') as f:
-            f.write(image_bytes)
-        return jsonify({
-            "message": "Imagen guardada correctamente",
-            "image_url": f"/static/processed/{filename}"
-        })
+    if not data or 'filename' not in data:
+        return jsonify({"error": "Nombre de archivo no proporcionado"}), 400
     
-    except Exception as e:
-        logger.error(f"Error guardando imagen de canvas: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-    
+    filename = secure_filename(data['filename'])
+    if delete_file_from_uploads(filename):
+        return jsonify({"message": f"Imagen {filename} eliminada de uploads"})
+    return jsonify({"error": f"No se pudo eliminar {filename} de uploads"}), 404
 
-if __name__ == "__main__":
-    init_camera()  # Inicializar la cámara al iniciar el servidor
+@app.route('/check_unique_number')
+def check_unique_number():
+    """Verifica si el número único ya existe."""
+    nr_unico = request.args.get('nr_unico', '').strip()
+    if not nr_unico:
+        return jsonify({'error': 'Número único no proporcionado'}), 400
+
+    # Buscar archivos en la carpeta labels que contengan el nr_unico
+    for fname in os.listdir(LABELS_FOLDER):
+        if not fname.endswith('.txt'):
+            continue
+        # Extraer partes del nombre: fecha-seccion-rolado-nr_unico-cantidad.txt
+        parts = fname.split('-')
+        if len(parts) < 5:
+            continue
+        file_nr_unico = parts[-2]
+        if file_nr_unico == nr_unico:
+            # Si encontramos el mismo número único en otro archivo
+            return jsonify({'exists': True})
+    return jsonify({'exists': False})
+
+# Alwys the last line in the app.py
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
