@@ -1,3 +1,26 @@
+// ------------ Pruebas botón Flask -------------------
+document.addEventListener('DOMContentLoaded', function() {
+    // Obtener referencia al botón
+    const flaskButton = document.getElementById('flaskButton');
+    
+    // Añadir event listener
+    flaskButton.addEventListener('click', llamarFlask);
+});
+
+async function llamarFlask() {
+    try {
+        console.log("Intentando llamar a Flask...");  // Debug
+        const response = await fetch('api/saludar');
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+        const data = await response.json();
+        alert(data.mensaje);
+        console.log("La llamada ha sido un exito");  // Debug
+    } catch (error) {
+        console.error("Error en fetch:", error);
+        alert("Fallo al conectar con Flask. Abre la consola (F12) para más detalles.");
+    }
+}
+
 // ------------------------- VARIABLES GLOBALES -------------------------
 let currentImage = '';       
 let labels = [];             
@@ -21,9 +44,10 @@ function updateNavigationButtons(enabled) {
 updateNavigationButtons(false);
 
 // Configuración de etiquetas
-const labelRadius = 45;      
-let SCALE_FACTOR = 0.25;     
-let CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
+let labelRadius = 45; // Radius in pixels for the original image
+let SCALE_FACTOR = 0.25;
+let CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR); // Radius in pixels on canvas
+let NORMALIZED_LABEL_SIZE; // Normalized width/height for YOLO format
 
 // Dimensiones iniciales del canvas
 let IMAGE_WIDTH = 1008;      
@@ -37,24 +61,26 @@ canvas.height = CANVAS_HEIGHT;
 
 let originalImage = new Image();  
 
-// Función para actualizar las dimensiones del canvas según la imagen
+// Update canvas dimensions and label size
 function updateCanvasDimensions(image) {
-    IMAGE_WIDTH = image.naturalWidth; 
-    IMAGE_HEIGHT = image.naturalHeight; 
-    
+    IMAGE_WIDTH = image.naturalWidth;
+    IMAGE_HEIGHT = image.naturalHeight;
+
     // Calcular el factor de escala manteniendo la proporción
-    const scaleX = 1008 / IMAGE_WIDTH;  // 1008 es el ancho objetivo
-    const scaleY = 756 / IMAGE_HEIGHT;  // 756 es el alto objetivo
-    SCALE_FACTOR = Math.min(scaleX, scaleY);  // Usar el menor para no distorsionar
-    
+    const scaleX = 1008 / IMAGE_WIDTH; // 1008 es el ancho objetivo
+    const scaleY = 756 / IMAGE_HEIGHT; // 756 es el alto objetivo
+    SCALE_FACTOR = Math.min(scaleX, scaleY);
+
     // Actualizar dimensiones del canvas
     CANVAS_WIDTH = Math.round(IMAGE_WIDTH * SCALE_FACTOR);
     CANVAS_HEIGHT = Math.round(IMAGE_HEIGHT * SCALE_FACTOR);
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
 
-    // Mantener el tamaño de las etiquetas proporcional
-    CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
+    // Actualizar tamaño de la etiqueta
+    CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR); // Radius in pixels
+    NORMALIZED_LABEL_SIZE = (CANVAS_LABEL * 2) / CANVAS_WIDTH; // Normalized diameter (width/height)
+    console.log("CANVAS_LABEL:", CANVAS_LABEL, "NORMALIZED_LABEL_SIZE:", NORMALIZED_LABEL_SIZE);
 }
 
 // Helper function to parse barcode
@@ -64,10 +90,22 @@ function parseBarcode(barcode) {
     barcode = barcode.trim().replace(/'/g, '-');
     
     const parts = barcode.split('-');
-    if (parts.length !== 3) return null;
-    const [seccion, rolado, nr_unico] = parts;
-    if (!seccion || !rolado || !nr_unico || isNaN(nr_unico)) return null;
-    return { seccion, rolado, nr_unico };
+    if (parts.length !== 4) return null;
+    const [seccion, rolado, nr_unico, prev_count] = parts;
+    if (!seccion || !rolado || !nr_unico || !prev_count || isNaN(nr_unico) || isNaN(prev_count)) return null;
+    return { seccion, rolado, nr_unico, prev_count };
+}
+
+// Function to lookup section data from database (empty for now)
+function lookupSectionData(seccion) {
+    // TODO: Implement database lookup for section
+    console.log('Looking up section data for:', seccion);
+}
+
+// Function to lookup rolado data from database (empty for now)
+function lookupRoladoData(rolado) {
+    // TODO: Implement database lookup for rolado
+    console.log('Looking up rolado data for:', rolado);
 }
 
 // Function to update fields based on barcode input
@@ -83,13 +121,25 @@ function updateFields() {
         const seccionField = document.getElementById('seccion');
         const roladoField = document.getElementById('rolado');
         const nrUnicoField = document.getElementById('nr_unico');
+        const detectedCountSpan = document.getElementById('detected_count');
+        const previousCountSpan = document.getElementById('previous_count');
         
         if (seccionField && roladoField && nrUnicoField) {
             seccionField.value = barcodeData.seccion;
             roladoField.value = barcodeData.rolado;
             nrUnicoField.value = barcodeData.nr_unico;
+            
+            // Look up additional data
+            lookupSectionData(barcodeData.seccion);
+            lookupRoladoData(barcodeData.rolado);
         } else {
             console.error("One or more fields (seccion, rolado, nr_unico) not found");
+        }
+
+        // Update cigar counts
+        if (detectedCountSpan && previousCountSpan) {
+            detectedCountSpan.textContent = labels.length.toString();
+            previousCountSpan.textContent = barcodeData.prev_count;
         }
         
         // Set current date for date fields if they are empty
@@ -111,7 +161,33 @@ function runPythonScript() {
 }
 
 function clearCanvas() {
-    if (confirm("¿Estás seguro de que deseas limpiar el canvas por completo?")) { 
+    // Add debugging logs to verify currentImage and server response
+    if (confirm("¿Estás seguro de que deseas limpiar el canvas por completo?")) {
+        // Si hay una imagen actual, eliminarla de uploads/
+        if (currentImage) {
+            console.log("Intentando eliminar la imagen:", currentImage); // Debugging log
+            // Update the URL to include the port number
+            fetch('delete_uploaded_image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ filename: currentImage })
+            })
+            .then(response => {
+                console.log("Respuesta del servidor:", response); // Debugging log
+                return response.json();
+            })
+
+            .then(data => {
+                console.log(data.message);
+            })
+            .catch(error => {
+                console.error('Error eliminando imagen:', error);
+            });
+        }
+        
+        // Limpiar el canvas como antes
         labels = [];
         imageFiles = [];
         currentImage = '';
@@ -239,15 +315,14 @@ function loadProcessedImage() {
                 currentImage = file.name; 
                 document.getElementById('current_image').innerHTML = "Imagen Seleccionada: " + file.name;
                 
-                
                 // Fetch the associated label file from /labels/
-                fetch(`/labels/${fileName}.txt`)
+                fetch(`labels/${fileName}.txt`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('No se encontró el archivo de etiquetas');
                         }
-                            return response.text();
-                        })
+                        return response.text();
+                    })
                     .then(text => {
                         // Parsear formato YOLO plano
                         labels = [];
@@ -260,7 +335,7 @@ function loadProcessedImage() {
                                 const x = parseFloat(parts[1]);
                                 const y = parseFloat(parts[2]);
                                 if (!isNaN(x) && !isNaN(y)) {
-                                    labels.push([x, y]);
+                                    labels.push([x, y, NORMALIZED_LABEL_SIZE, NORMALIZED_LABEL_SIZE]);
                                 }
                             }
                         }
@@ -305,7 +380,10 @@ async function toggleWebcam() {
         }
         clearCanvas();
     }
+    
     const webcamContainer = document.getElementById('webcam-container');
+    
+    // Si la cámara ya está activa, desactivarla
     if (webcamStream) {
         webcamStream.getTracks().forEach(track => track.stop());
         webcamStream = null;
@@ -313,33 +391,94 @@ async function toggleWebcam() {
         $("#webcam-container").hide("slow");
         $("#canvas").show("slow");
         updateButtons4CameraStatus(false);
-    } else {
-        try {
-            webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
-            webcamVideo.srcObject = webcamStream;
-            webcamVideo.play();
-            $("#canvas").hide("slow");
-            $("#webcam-container").show("slow");
-            webcamVideo.onloadedmetadata = () => {
-                const videoWidth = webcamVideo.videoWidth;
-                const videoHeight = webcamVideo.videoHeight;
-                const aspectRatio = videoWidth / videoHeight;
-                const container = document.getElementById('webcam-preview-container');
-                if (container) {
-                    container.style.width = '640px';
-                    container.style.height = `${Math.round(640 / aspectRatio)}px`;
-                    container.appendChild(webcamVideo); 
-                } else {
-                    console.warn("El contenedor 'webcam-preview-container' no existe.");
-                }
-            };
-            updateButtons4CameraStatus(true);
-        } catch (err) {
-            console.error("Error al acceder a la cámara:", err);
-            alert("No se pudo acceder a la cámara. Asegúrate de permitir el acceso.");
-            $("#canvas").show("slow");
-            updateButtons4CameraStatus(false);
+        return;
+    }
+    
+    // Intentar activar la cámara
+    try {
+        // Primero verificar permisos
+        const permissionStatus = await navigator.permissions.query({ name: 'camera' });
+        
+        if (permissionStatus.state === 'denied') {
+            throw new Error('El acceso a la cámara fue bloqueado permanentemente. Por favor, habilítalo manualmente en la configuración del navegador.');
         }
+        
+        // Configuración mejorada de la cámara
+        const constraints = {
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'environment' // Preferir cámara trasera en móviles
+            }
+        };
+        
+        webcamStream = await navigator.mediaDevices.getUserMedia(constraints);
+        webcamVideo.srcObject = webcamStream;
+        
+        // Esperar a que el video esté listo
+        await new Promise((resolve) => {
+            webcamVideo.onloadedmetadata = resolve;
+            webcamVideo.play().catch(e => console.error("Error al reproducir video:", e));
+        });
+        
+        $("#canvas").hide("slow");
+        $("#webcam-container").show("slow");
+        
+        // Ajustar contenedor de video
+        const container = document.getElementById('webcam-preview-container');
+        if (container) {
+            const aspectRatio = webcamVideo.videoWidth / webcamVideo.videoHeight;
+            container.style.width = '640px';
+            container.style.height = `${Math.round(640 / aspectRatio)}px`;
+            
+            // Limpiar contenedor antes de agregar el video
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+            container.appendChild(webcamVideo);
+        }
+        
+        updateButtons4CameraStatus(true);
+        
+    } catch (err) {
+        console.error("Error detallado de cámara:", err);
+        
+        let errorMessage = "No se pudo acceder a la cámara. ";
+        
+        switch(err.name) {
+            case 'NotAllowedError':
+                errorMessage += "Permiso denegado. Por favor, permite el acceso a la cámara en los ajustes de tu navegador.";
+                break;
+            case 'NotFoundError':
+                errorMessage += "No se encontró ningún dispositivo de cámara disponible.";
+                break;
+            case 'NotReadableError':
+                errorMessage += "La cámara está siendo usada por otra aplicación o no responde.";
+                break;
+            case 'OverconstrainedError':
+                errorMessage += "No se puede cumplir con los requisitos de resolución solicitados.";
+                break;
+            case 'SecurityError':
+                errorMessage += "El acceso a la cámara está bloqueado por configuración de seguridad. Prueba en localhost o con HTTPS.";
+                break;
+            default:
+                errorMessage += `Error técnico: ${err.message}`;
+        }
+        
+        // Mostrar mensaje detallado y opción para abrir configuración
+        if (confirm(`${errorMessage}\n\n¿Quieres abrir la configuración de permisos?`)) {
+            if (chrome && chrome.runtime && chrome.runtime.openOptionsPage) {
+                // Chrome extension
+                chrome.runtime.openOptionsPage();
+            } else {
+                // Navegador normal
+                window.open('chrome://settings/content/camera', '_blank');
+            }
+        }
+        
+        $("#canvas").show("slow");
+        updateButtons4CameraStatus(false);
+        webcamStream = null;
     }
 }
 
@@ -403,6 +542,12 @@ function updateLabelCounter() {
 }
 
 function drawLabels() {
+    // Update existing labels to use the new NORMALIZED_LABEL_SIZE
+    labels = labels.map(label => {
+        const [x, y, , ] = label;
+        return [x, y, NORMALIZED_LABEL_SIZE, NORMALIZED_LABEL_SIZE];
+    });
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (originalImage && originalImage.complete) {
         ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
@@ -411,11 +556,12 @@ function drawLabels() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
     labels.forEach((label, index) => {
-        const [x_center, y_center] = label;
+        const [x_center, y_center, , ] = label; // Ignore stored width/height for drawing
         const x = x_center * canvas.width;
         const y = y_center * canvas.height;
+
         ctx.beginPath();
-        ctx.arc(x, y, CANVAS_LABEL, 0, Math.PI * 2);
+        ctx.arc(x, y, CANVAS_LABEL, 0, Math.PI * 2); // Use CANVAS_LABEL as radius
         ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
         ctx.fill();
         ctx.strokeStyle = '#000';
@@ -427,7 +573,8 @@ function drawLabels() {
         ctx.fillText((index + 1).toString(), x, y);
     });
     ctx.fillStyle = 'white';
-    ctx.fillRect(10, 5, canvas.width - 20, 35);    ctx.fillStyle = 'black';
+    ctx.fillRect(10, 5, canvas.width - 20, 35);
+    ctx.fillStyle = 'black';
     ctx.font = '24px Arial';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
@@ -461,7 +608,6 @@ function updateButtonStyles() {
     addBtn.style.backgroundColor = addMode ? "#50ff50" : "#909087";
 }
 
-
 function undoLastLabel() {
     if (labels.length > 0) {
         labels.pop();
@@ -471,16 +617,16 @@ function undoLastLabel() {
 
 canvas.addEventListener('click', function(event) {
     const rect = canvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
+    const x = (event.clientX - rect.left) / rect.width; // Normalized x
+    const y = (event.clientY - rect.top) / rect.height; // Normalized y
+
     if (addMode) {
-        labels.push([x, y]);
+        labels.push([x, y, NORMALIZED_LABEL_SIZE, NORMALIZED_LABEL_SIZE]); // Use normalized size
         drawLabels();
     } else if (deleteMode) {
         labels = labels.filter(label => {
-            const [x_center, y_center] = label;
-            const distance = Math.sqrt((x - x_center) ** 2 + (y - y_center) ** 2);
-            return distance > CANVAS_LABEL / CANVAS_WIDTH;
+            const [labelX, labelY] = label;
+            return Math.abs(labelX - x) > NORMALIZED_LABEL_SIZE || Math.abs(labelY - y) > NORMALIZED_LABEL_SIZE;
         });
         drawLabels();
     }
@@ -501,7 +647,7 @@ function uploadImage() {
     }
     const formData = new FormData();
     formData.append("file", file);
-    fetch("/upload", {
+    fetch("upload", {
         method: "POST",
         body: formData
     })
@@ -520,15 +666,20 @@ function uploadImage() {
             alert("Error al procesar la imagen: " + (data.error || "Error desconocido"));
         }
     })
-    .catch(error => console.error("Error:", error));
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Error al conectar con el servidor: " + error.message);
+    });
 }
 
 // ------------------------- GUARDAR ETIQUETAS -------------------------
 function saveLabels() {
-    if (currentImage.length === 0) {
-        alert("¡Selecciona una imagen!");
+    if (imageFiles.length === 0 && currentImage === '') {
+        alert("¡No hay imágenes para guardar etiquetas!");
         return;
     }
+
+    // Inicializar campos del formulario
     const dt = new Date();
     const day = ("0" + dt.getDate()).slice(-2);
     const month = ("0" + (dt.getMonth() + 1)).slice(-2);
@@ -539,7 +690,13 @@ function saveLabels() {
     document.getElementById('rolado').value = '';
     document.getElementById('nr_unico').value = '';
     document.getElementById('barcodeInput').value = '';
-    document.getElementById('torcedor').value = 'xxxxx'; // Valor por defecto para torcedor    // Attach input event listener to barcodeInput
+    document.getElementById('torcedor').value = 'xxxxx';
+
+    // Configurar botones
+    $("#Save_Confirm").show();
+    $("#Print_Confirm").hide();
+    $("#Print_Save_Confirm").hide();
+    
     const barcodeInput = document.getElementById('barcodeInput');
     if (barcodeInput) {
         barcodeInput.addEventListener('input', updateFields);
@@ -570,7 +727,6 @@ function Save_Cancel() {
     $("#save-container").hide("slow");
     $("#canvas").show("slow");
     updateButtons4Save(false);
-    // Remove event listener to prevent memory leaks
     const barcodeInput = document.getElementById('barcodeInput');
     if (barcodeInput) {
         barcodeInput.removeEventListener('input', updateFields);
@@ -578,24 +734,25 @@ function Save_Cancel() {
 }
 
 function Save_Confirm() {
+    const fabricante = document.getElementById('fabricante').value.trim();
     const date_prod = document.getElementById('date_prod').value.trim().split('-').join('');
     const date_control = document.getElementById('date_control').value.trim().split('-').join('');
     const rolado = document.getElementById('rolado').value.trim();
     const seccion = document.getElementById('seccion').value.trim();
     const nr_unico = document.getElementById('nr_unico').value.trim();
     const torcedor = document.getElementById('torcedor').value.trim();
-      if (!date_prod || !date_control || !rolado || !seccion || !nr_unico || !torcedor) {
+    
+    if (!fabricante||!date_prod || !date_control || !rolado || !seccion || !nr_unico || !torcedor) {
         alert("Por favor, completa todos los campos.");
-        $("#save-container").hide("slow");
-        $("#canvas").show("slow");
-        updateButtons4Save(false);
         return;
     }
 
-    const newFileName = `${date_prod}-${seccion}-${rolado}-${nr_unico}-${labels.length}.jpg`;
+    console.log("Valor de fabricante:", fabricante);
+
+    const newFileName = `${fabricante}-${date_prod}-${seccion}-${rolado}-${nr_unico}-${labels.length}.jpg`;
 
     // Validar número único
-    fetch(`/check_unique_number?nr_unico=${encodeURIComponent(nr_unico)}`)
+    fetch(`check_unique_number?nr_unico=${encodeURIComponent(nr_unico)}`)
         .then(response => response.json())
         .then(data => {
             if (data.exists) {
@@ -608,7 +765,7 @@ function Save_Confirm() {
 
             const canvasImage = canvas.toDataURL('image/jpeg');
 
-            fetch('/update_labels', {
+            fetch("update_labels", {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json',
@@ -625,12 +782,12 @@ function Save_Confirm() {
             .then(data => {
                 if (data.message) {
                     currentImage = newFileName;
-                    originalImage.src = data.original_image_url || `/Uploads/${newFileName}`;
-                    originalImage.onload = function () {
-                        updateCanvasDimensions(originalImage);
-                        ctx.drawImage(originalImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-                        drawLabels();
-                    };
+                    
+                    // Actualizar la imagen original con la nueva ubicación en save/
+                    if (data.original_image_url) {
+                        originalImage.src = data.original_image_url;
+                    }
+                    
                     alert("Datos y nombres de archivo guardados correctamente");
                 } else {
                     alert("Error al guardar etiquetas: " + (data.error || "Error desconocido"));
@@ -647,7 +804,8 @@ function Save_Confirm() {
                 addMode = false;
                 deleteMode = false;
                 updateButtonStyles();
-                // Remove event listener
+                
+                // Eliminar el listener del código de barras
                 const barcodeInput = document.getElementById('barcodeInput');
                 if (barcodeInput) {
                     barcodeInput.removeEventListener('input', updateFields);
@@ -665,44 +823,136 @@ function Save_Confirm() {
 
 // ------------------------- IMPRESIÓN -------------------------
 function printLabel() {
-    if (currentImage.length === 0) {
-        alert("¡Selecciona una imagen!");
-        return;}
+    if (imageFiles.length === 0 && currentImage === '') {
+        alert("¡No hay imágenes para guardar etiquetas!");
+        return;
+    }
 
-    $("#print-container").show("slow");
-    $("#canvas").hide("slow");
+    // Inicializar campos del formulario
+    const dt = new Date();
+    const day = ("0" + dt.getDate()).slice(-2);
+    const month = ("0" + (dt.getMonth() + 1)).slice(-2);
+    const date = dt.getFullYear() + "-" + month + "-" + day;
+    document.getElementById('date_prod').value = date;
+    document.getElementById('date_control').value = date;
+    document.getElementById('seccion').value = '';
+    document.getElementById('rolado').value = '';
+    document.getElementById('nr_unico').value = '';
+    document.getElementById('barcodeInput').value = '';
+    document.getElementById('torcedor').value = 'xxxxx';
+    
+    // Mostrar los botones relevantes
+    $("#Save_Confirm").css('display', 'inline-block');
+    $("#Print_Confirm").css('display', 'inline-block');
+    $("#Print_Save_Confirm").css('display', 'inline-block');
+    $("#Save_Cancel").css('display', 'inline-block');
+    
+    const barcodeInput = document.getElementById('barcodeInput');
+    if (barcodeInput) {
+        barcodeInput.addEventListener('input', updateFields);
+        $("#canvas").hide("slow");
+        $("#save-container").show("slow", function() {
+            barcodeInput.focus();
+        });
+    } else {
+        console.error("barcodeInput element not found");
+        $("#canvas").hide("slow");
+        $("#save-container").show("slow");
+    }
+    
     updateButtons4Print(true);
 }
 
 function updateButtons4Print(bStatus) {
+    // Activar/desactivar botones según el estado
     document.querySelectorAll("button").forEach(button => {
-        if (!button.id.startsWith("Print_")) {
-            button.disabled = bStatus;
-        } else {
+        if (button.id === "Save_Confirm" || 
+            button.id === "Print_Confirm" || 
+            button.id === "Print_Save_Confirm" || 
+            button.id === "Save_Cancel") {
             button.disabled = !bStatus;
+        } else {
+            button.disabled = bStatus;
         }
     });
 }
 
-function Print_Confirm() {
-    $("#print-container").hide("slow");
+function Print_Cancel() {
+    $("#save-container").hide("slow");
     $("#canvas").show("slow");
     updateButtons4Print(false);
+    
+    // Limpiar el listener del código de barras
+    const barcodeInput = document.getElementById('barcodeInput');
+    if (barcodeInput) {
+        barcodeInput.removeEventListener('input', updateFields);
+    }
 }
 
-function Print_Cancel() {
-    $("#print-container").hide("slow");
+function Print_Confirm() {
+    const fabricante = document.getElementById('fabricante').value.trim();
+    const date_prod = document.getElementById('date_prod').value.trim();
+    const date_control = document.getElementById('date_control').value.trim();
+    const rolado = document.getElementById('rolado').value.trim();
+    const seccion = document.getElementById('seccion').value.trim();
+    const nr_unico = document.getElementById('nr_unico').value.trim();
+    const torcedor = document.getElementById('torcedor').value.trim();
+    
+    if (!fabricante||!date_prod || !date_control || !rolado || !seccion || !nr_unico || !torcedor) {
+        alert("Por favor, completa todos los campos.");
+        return;
+    }
+    
+    window.print();
+    $("#save-container").hide("slow");
     $("#canvas").show("slow");
     updateButtons4Print(false);
+
+    // Limpiar el listener del código de barras
+    const barcodeInput = document.getElementById('barcodeInput');
+    if (barcodeInput) {
+        barcodeInput.removeEventListener('input', updateFields);
+    }
+}
+
+function Print_Save_Confirm() {
+    const fabricante = document.getElementById('fabricante').value.trim();
+    const date_prod = document.getElementById('date_prod').value.trim();
+    const date_control = document.getElementById('date_control').value.trim();
+    const rolado = document.getElementById('rolado').value.trim();
+    const seccion = document.getElementById('seccion').value.trim();
+    const nr_unico = document.getElementById('nr_unico').value.trim();
+    const torcedor = document.getElementById('torcedor').value.trim();
+    
+    if (!fabricante||!date_prod || !date_control || !rolado || !seccion || !nr_unico || !torcedor) {
+        alert("Por favor, completa todos los campos.");
+        return;
+    }
+    
+    // Primero guardamos
+    Save_Confirm();
+    // Luego imprimimos
+    window.print();
+    
+    $("#save-container").hide("slow");
+    $("#canvas").show("slow");
+    updateButtons4Print(false);
+    
+    // Limpiar el listener del código de barras
+    const barcodeInput = document.getElementById('barcodeInput');
+    if (barcodeInput) {
+        barcodeInput.removeEventListener('input', updateFields);
+    }
 }
 
 // ------------------------- CONFIGURACIÓN -------------------------
 function toggleSettings() {
     if (labels == null || labels.length === 0) {
-        alert("!No hay etiquetas para configurar. Por favor, añade etiquetas primero.");
-        return;}
+        alert("¡No hay etiquetas para configurar!. Por favor, añade etiquetas primero.");
+        return;
+    }
 
-        $("#overlay").show();
+    $("#overlay").show();
     $("#settingsWindow").show("slow");
 }
 
@@ -712,18 +962,37 @@ function closeSettings() {
 }
 
 function applySettings() {
-    const newScaleFactor = parseFloat(document.getElementById('labelSize').value) / 100;
-    if (isNaN(newScaleFactor) || newScaleFactor <= 0) {
+    const newLabelRadius = parseFloat(document.getElementById('labelSize').value); // Use pixel radius directly
+    if (isNaN(newLabelRadius) || newLabelRadius <= 0) {
         alert("Por favor, selecciona un valor válido para el tamaño de las etiquetas.");
         return;
     }
-    SCALE_FACTOR = newScaleFactor;
-    CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR);
+    labelRadius = newLabelRadius; // Update global labelRadius
+    CANVAS_LABEL = Math.round(labelRadius * SCALE_FACTOR); // Update canvas label size
+    NORMALIZED_LABEL_SIZE = (CANVAS_LABEL * 2) / CANVAS_WIDTH; // Update normalized size
+    // Update existing labels to use the new NORMALIZED_LABEL_SIZE
+    labels = labels.map(label => {
+        const [x, y, , ] = label;
+        return [x, y, NORMALIZED_LABEL_SIZE, NORMALIZED_LABEL_SIZE];
+    });
     drawLabels();
     closeSettings();
+    console.log("labelRadius:", labelRadius, "CANVAS_LABEL:", CANVAS_LABEL, "NORMALIZED_LABEL_SIZE:", NORMALIZED_LABEL_SIZE);
 }
 
 // Inicializar visualización del tamaño de etiqueta
 document.getElementById('labelSize').addEventListener('input', function() {
     document.getElementById('labelSizeValue').textContent = this.value + ' px';
 });
+
+function updateCanvasSize() {
+    const mgridCanvas = document.querySelector('.mgrid_canvas');
+    if (mgridCanvas) {
+        canvas.width = mgridCanvas.offsetWidth;
+        canvas.height = mgridCanvas.offsetHeight;
+    }
+}
+
+window.addEventListener('resize', updateCanvasSize);
+updateCanvasSize();
+
