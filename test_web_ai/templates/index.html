@@ -1,119 +1,167 @@
-<!DOCTYPE html>
-<html lang="es">
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detección de Objetos</title>
-    <link rel="icon" type="image/png" href="../static/icons/logo.png">
-    <link rel="stylesheet" href="../static/styles.css">
+<meta charset="utf-8">
+<title>Tabacalera SLU - Cigar Counter Application</title>
+<link rel="icon" type="image/png" href="images/logo-desktop.png">
+<link href="styles.css" rel="stylesheet" type="text/css">
+<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
 </head>
+
 <body>
+<div class="container">
+<header>
+<!-- AdlR replace with the header -->
+  <div id="head">
+    <div id="head_logo"><a href="test_grid.html"><img id="tslu_logo" src="images/Tabacalera Logo - small - 150x64.jpg" alt="Tabacalera Logo" width="150" height="64" ></a></div>
+    <div id="head_title">Tabacalera - Cigar Counter Application</div>
+  </div>
+
+<!-- end header -->
+</header>
+<main>
+  <div class="mgrid">
+        <div>&nbsp;</div>
+        <div id="current_image" class="mgrid_image_name">[Nombre de la Imagen Eligida]</div>
+        <div class="button_settings"><button onclick="toggleSettings()" title="Cambiar Configuración"><img src="images/bn_settings_30x30.png" alt="Ajustes" class="icon"> Settings</button></div>
+        <div class="mgrid_buttons">
+          <div class="buttons">
+            <div class="button_cell"><button id="PreviousImage" onclick="previousImage()" title="Anterior"><img src="images/bn_previous_30x30.png" alt="Anterior" class="icon"> Anterior</button></div>
+            <div class="button_cell"><button id="NextImage"     onclick="nextImage()" title="Sigiente"><img class="icon" src="images/bn_next_30x30.png" alt="Sigiente"> Sigiente</button></div>
+            <div class="button_cell"><button id="ProcessImage"  onclick="uploadImage()" title="Procesar"><img src="images/bn_play 30x30.png" alt="Procesar" class="icon"> Procesar</button></div>
+            <div class="button_cell"><button id="SaveLabels"    onclick="saveLabels()" title="Guardar"><img class="icon" src="images/bn_save_30x30.png" alt="Save" > Guardar</button></div>
+            <div class="button_cell"><button id="PrintLabels"   onclick="printLabel()" title="Imprimir"><img class="icon" src="images/bn_printer 30x30.png" alt="Imprimir" > Imprimir</button></div>
+            <div class="button_cell">&nbsp;</div>
+          </div>
+        </div>
+        <div class="mgrid_canvas_left">
+          <div class="buttons_left">
+              <br><br>
+              <button class="button_cell" id="SelectImage"  onclick="selectImage()" title="Selecionar foto"><img class="icon" src="images/bn_image_30x30.png" alt="Imagen"> Select</button>
+              <button class="button_cell" id="SelectFolder" onclick="selectFolder()" title="Cargar Foto de una Carpeta"><img class="icon" src="images/bn_folder_30x30.png" alt="Carpeta"> Carpeta</button>
+              <button class="button_cell" id="LoadProcessed" onclick="loadProcessedImage()" title="Cargar Imagen Procesada"><img class="icon" src="images/bn_processed_30x30.png" alt="Procesada"> Procesada</button>          
+              <button class="button_cell" id="SelectWebCam" onclick="toggleWebcam()" title="Sacar foto con WebCam"><img class="icon" src="images/bn_webcam_30x30.png" alt="Webcam"> Camera</button>
+              <br><br>
+              <button class="button_cell" id="AddLabels"    onclick="toggleAddMode()" title="Añadir Etiquetas"><img src="images/bn_labels_30x30.png" alt="Añadir" class="icon"> Añadir</button>
+              <button class="button_cell" id="UndoLabels"   onclick="undoLastLabel()" title="Deshacer Etiquetas"><img src="images/bn_undo_30x30.png" alt="Deshacer" class="icon"> Deshacer</button>
+              <button class="button_cell" id="DeleteLabels" onclick="toggleDeleteMode()" title="Eliminar Etiquetas"><img class="icon" src="images/bn_eraser_30x30.png" alt="Borrar"> Eliminar</button>
+              <button class="button_cell" id="ClearCanvas"  onclick="clearCanvas()" title="Vaciar Canvas"><img src="images/bn_broom_30x30.png" alt="Limpiar" class="icon"> Vaciar</button>
+              </div>
+              <br><br>
+              <button id="flaskButton">Test Flask</button>
+        </div>
+        <div class="mgrid_canvas">
+          <!-- AdlR Image Canvas --> 
+          <canvas id="canvas"></canvas>          <!-- AdlR Webcam Container --> 
+          <div id="webcam-container">
+            <div id="webcam-preview-container" style="width: 967px; height: 675px;"><video id="webcam-video" autoplay playsinline style="width: 100%; height: 100%; object-fit: contain;"></video></div>
+            <div style="text-align: center;">
+              <button class="button_cam" id="Webcam_Capture" onclick="capturePhoto()">Capturar Foto</button>
+              <button class="button_cam" id="Webcam_Close" onclick="toggleWebcam()">Cerrar Cámara</button>
+            </div>
+          
+          </div>      <!-- Save Container -->
+          <div id="save-container" style="display: none;">      
+              <div class="save-dialog">
+                <h2>Guardar Etiquetas</h2>
+              
+                <div class="input-section">
+                        <div>
+                            <label for="fabricante_label">Fábrica</label>
+                            <select id="fabricante">
+                              <option value="TDG">TDG</option>
+                              <option value="FDG">FDG</option>
+                            </select>
+                        </div>
+                    <div>
+                        <label for="date_prod">Fecha de Producción</label>
+                        <input type="date" id="date_prod">
+                    </div>
+                    
+                    <div>
+                        <label for="date_control">Fecha de Control</label>
+                        <input type="date" id="date_control">
+                    </div>
+                </div>
+              
+                <div class="barcode-section">
+                  <div class="barcode-input">
+                        <label for="torcedor">Código de Torcedor</label>
+                        <input type="text" id="torcedor">
+                    </div>
+                    <div class="barcode-input">
+                        <label for="barcodeInput">Código de Etiqueta</label>
+                        <input type="text" id="barcodeInput" placeholder="Formato: 00-0000-00000-000">
+                    </div>
+                </div>
+              
+                <div class="data-section">
+                    <div class="data-group">
+                        <label for="seccion">Sección</label>
+                        <input type="text" id="seccion" readonly>
+                        <div id="seccion_data" class="data-display">
+                            <!-- Datos de sección se mostrarán aquí -->
+                        </div>
+                    </div>
+                    
+                    <div class="data-group">
+                        <label for="rolado">Código Rolado</label>
+                        <input type="text" id="rolado" readonly>
+                        <div id="rolado_data" class="data-display">
+                            <!-- Datos de rolado se mostrarán aquí -->
+                        </div>
+                    </div>
+                </div>
+                <div>
+                      <label for="nr_unico">Número Único</label>
+                      <input type="text" id="nr_unico" readonly>
+                </div>
+                
+                <div class="cigar-counts">
+                    <div class="count-group">
+                        <label>Unidades Detectados</label>
+                        <span id="detected_count">0</span>
+                    </div>
+                    <div class="count-group">
+                        <label>Unidades en Etiqueta Actual</label>
+                        <span id="previous_count">0</span>
+                    </div>
+                </div>                  <div class="button-group">
+                    <button id="Save_Confirm" onclick="Save_Confirm()">Guardar</button>
+                    <button id="Print_Confirm" onclick="Print_Confirm()" style="display: none;">Imprimir</button>
+                    <button id="Print_Save_Confirm" onclick="Print_Save_Confirm()" style="display: none;">Guardar e Imprimir</button>
+                    <button id="Save_Cancel" onclick="Save_Cancel()">Cancelar</button>
+                </div>
+            </div>
+        </div>
+          <!-- End Save Container -->
+    </div>
+  </div>
+  
+    <!-- Hidden input components for image or folder selection -->
     <input type="file" id="imageInput" style="display: none;" accept="image/*">
     <input type="file" id="folderInput" webkitdirectory multiple style="display: none;" />
+    <input type="file" id="processedImageInput" style="display: none;" accept="image/*" />
 
-    <!-- División 1 (Barra lateral izquierda) -->
-    <div class="sidebar">
-        <div class="tool-buttons">
-            <button onclick="toggleDeleteMode()">
-                <img src="../static/icons/eraser_5411950.png" alt="Borrar" class="icon">
-            </button>
-            <button onclick="toggleAddMode()">
-                <img src="../static/icons/paint-brush_2081162.png" alt="Añadir" class="icon">
-            </button>
-            <button onclick="undoLastLabel()">
-                <img src="../static/icons/undo_5629902.png" alt="Deshacer" class="icon">
-            </button>
-            <button onclick="clearCanvas()">
-                <img src="../static/icons/broom_13810466.png" alt="Limpiar" class="icon">
-            </button>
-            <button onclick="toggleSettings()">
-                <img src="../static/icons/settings_407111.png" alt="Ajustes" class="icon">
-            </button>
-        </div>
-        
-        <div class="input-buttons">
-            <button onclick="selectImage()">
-                <img src="../static/icons/photograph_345331.png" alt="Subir Imagen" class="icon">
-            </button>
-            <button id="webcam-button" onclick="toggleWebcam()">
-                <img src="../static/icons/webcam_980961.png" alt="Usar Webcam" class="icon">
-            </button>
-            <button onclick="selectFolder()">
-                <img src="../static/icons/open-folder_7164738.png" alt="Subir Carpeta" class="icon">
-            </button>
-        </div>
-    </div>
-
-    <!-- División 2 (Contenido principal) -->
-    <div class="main-content">
-        <!-- Contenedor de botones superiores -->
-        <div class="top-controls">
-            <div id="label-counter" class="label-counter">
-                Total de etiquetas: 0
-            </div>
-            
-            <div class="navigation-buttons">
-                <button onclick="previousImage()">
-                    <img src="../static/icons/left_7242687.png" alt="Anterior" class="icon">
-                </button>
-                <button onclick="uploadImage()">Procesar</button>
-                <button onclick="nextImage()">
-                    <img src="../static/icons/right_7242682.png" alt="Siguiente" class="icon">
-                </button>
-                <button class="save-button" onclick="saveLabels()">Guardar</button>
-            </div>
-        </div>
-        
-        <!-- Contenedor del canvas -->
-        <div class="canvas-wrapper">
-            <canvas id="canvas"></canvas>
-        </div>
-    </div>
-
-    <!-- Contenedor de la cámara (inicialmente oculto) -->
-    <div id="webcam-container">
-        <div id="webcam-preview-container">
-            <video id="webcam-video" autoplay playsinline></video>
-        </div>
-        <div style="text-align: center;">
-            <button id="capture-button" onclick="capturePhoto()">Capturar Foto</button>
-            <button id="close-webcam-button" onclick="toggleWebcam()">Cerrar Cámara</button>
-        </div>
-    </div>
+  <!-- Ventana de Configuración (Oculta al inicio) -->
+  <!-- div id="settingsWindow" class="settings-window" style="display: none;" -->
+  <div id="settingsWindow" class="dialog" style="display: none;">
+    <h2>Configuración</h2>
     
-    <!-- Ventana de Configuración (Oculta al inicio) -->
-    <div id="settingsWindow" class="settings-window" style="display: none;">
-        <h2>Configuración</h2>
+    <label for="labelSize">Tamaño de Etiquetas:</label>
+    <input type="range" id="labelSize" min="10" max="100" value="45" step="1">
+    <span id="labelSizeValue">45 px</span>
 
-        <label for="labelSize">Tamaño de Etiquetas:</label>
-        <input type="range" id="labelSize" min="10" max="100" value="25" step="1">
-        <span id="labelSizeValue">25 px</span>
-
-        <br><br>
-
-        <button onclick="applySettings()">Aplicar</button>
-        <button onclick="closeSettings()">Cerrar</button>
-    </div>
-
-    <!-- Diálogo de guardar -->
-    <div id="saveDialog" class="dialog">
-        <h3>Guardar etiquetas</h3>
-
-        <label for="drawerNumber">Número de gaveta:</label>
-        <input type="text" id="drawerNumber" placeholder="Ej: A12" required><br><br>
-
-        <label for="date">Fecha:</label>
-        <input type="date" id="date" required><br><br>
-
-        <label for="cepo">Número de enrolado (cepo):</label>
-        <input type="number" id="cepo" placeholder="Ej: 42" required><br><br>
-        
-        <button onclick="confirmSave()">Guardar</button>
-        <button onclick="closeSaveDialog()">Cancelar</button>
-        <button onclick="clearDialog()">Limpiar</button>
-    </div>
-    <div id="overlay" class="overlay"></div>
+    <br>
     
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <button onclick="applySettings()">Aplicar</button>
+    <button onclick="closeSettings()">Cerrar</button>
+  </div>
+
+    
+    <!-- AdelaR -> Javascript here,because otherwise the canvas object will not be available -->
+  <script type="text/javascript" src="script.js"></script>  
+</div>
+</main>
 </body>
 </html>
