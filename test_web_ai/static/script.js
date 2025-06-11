@@ -13,11 +13,11 @@ async function llamarFlask() {
         const response = await fetch('api/saludar');
         if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
         const data = await response.json();
-        alert(data.mensaje);
+        showErrorMessage(data.mensaje);
         console.log("La llamada ha sido un exito");  // Debug
     } catch (error) {
         console.error("Error en fetch:", error);
-        alert("Fallo al conectar con Flask. Abre la consola (F12) para más detalles.");
+        showErrorMessage("Fallo al conectar con Flask. Abre la consola (F12) para más detalles.");
     }
 }
 
@@ -167,12 +167,12 @@ function clearCanvas() {
         if (currentImage) {
             console.log("Intentando eliminar la imagen:", currentImage); // Debugging log
             // Update the URL to include the port number
-            fetch('delete_uploaded_image', {
+            fetch('/delete_uploaded_image', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ filename: currentImage })
+                body: JSON.stringify({ uploads: true })
             })
             .then(response => {
                 console.log("Respuesta del servidor:", response); // Debugging log
@@ -226,7 +226,7 @@ function selectImage() {
     imageInput.addEventListener('change', function () {
         const file = imageInput.files[0];
         if (!file || !file.type.startsWith('image/')) {
-            alert("Por favor selecciona un archivo de imagen válido");
+            showErrorMessage("Por favor selecciona un archivo de imagen válido");
             return;
         }
         imageFiles = [file]; 
@@ -262,7 +262,7 @@ function selectFolder() {
         const files = Array.from(folderInput.files);
         imageFiles = files.filter(file => file.type.startsWith('image/'));
         if (imageFiles.length === 0) {
-            alert("No se encontraron imágenes en la carpeta seleccionada.");
+            showErrorMessage("No se encontraron imágenes en la carpeta seleccionada.");
             updateNavigationButtons(false);
             return;
         }
@@ -301,7 +301,7 @@ function loadProcessedImage() {
     processedInput.addEventListener('change', function () {
         const file = processedInput.files[0];
         if (!file || !file.type.startsWith('image/')) {
-            alert("Por favor selecciona un archivo de imagen válido");
+            showErrorMessage("Por favor selecciona un archivo de imagen válido");
             return;
         }
         const fileName = file.name.split('.').slice(0, -1).join('.'); // Remove extension
@@ -345,7 +345,7 @@ function loadProcessedImage() {
                         console.error("Error al cargar etiquetas:", error);
                         labels = [];
                         drawLabels();
-                        alert("No se pudo cargar el archivo de etiquetas. Se cargó la imagen sin etiquetas.");
+                        showErrorMessage("No se pudo cargar el archivo de etiquetas. Se cargó la imagen sin etiquetas.");
                     });
             };
         };
@@ -494,7 +494,7 @@ function updateButtons4CameraStatus(bStatus) {
 
 function capturePhoto() {
     if (!webcamStream) {
-        alert("La cámara no está activada");
+        showErrorMessage("La cámara no está activada");
         return;
     }
     const tempCanvas = document.createElement('canvas');
@@ -640,7 +640,7 @@ function uploadImage() {
     } else {
         const imageInput = document.getElementById("imageInput");
         if (imageInput.files.length === 0) {
-            alert("¡Selecciona una imagen!");
+            showErrorMessage("¡Selecciona una imagen!");
             return;
         }
         file = imageInput.files[0];
@@ -663,19 +663,40 @@ function uploadImage() {
                 drawLabels();
             };
         } else {
-            alert("Error al procesar la imagen: " + (data.error || "Error desconocido"));
+            showErrorMessage("Error al procesar la imagen: " + (data.error || "Error desconocido"));
         }
     })
     .catch(error => {
         console.error("Error:", error);
-        alert("Error al conectar con el servidor: " + error.message);
+        showErrorMessage("Error al conectar con el servidor: " + error.message);
     });
 }
 
 // ------------------------- GUARDAR ETIQUETAS -------------------------
+function saveCheck(printMode = false) {
+    // Validar campos del formulario
+    const fabricante = document.getElementById('fabricante').value.trim();
+    const date_prod = document.getElementById('date_prod').value.trim().split('-').join('');
+    const date_control = document.getElementById('date_control').value.trim().split('-').join('');
+    const rolado = document.getElementById('rolado').value.trim();
+    const seccion = document.getElementById('seccion').value.trim();
+    const nr_unico = document.getElementById('nr_unico').value.trim();
+    const torcedor = document.getElementById('torcedor').value.trim();
+
+    if (!fabricante || !date_prod || !date_control || !rolado || !seccion || !nr_unico || !torcedor) {
+        showErrorMessage("Por favor, completa todos los campos.");
+        return null;
+    }
+
+    // Determinar sufijo según el modo (impresión o guardado)
+    const suffix = printMode ? `-${labels.length}-P.jpg` : `-${labels.length}.jpg`;
+    const newFileName = `${fabricante}-${date_prod}-${seccion}-${rolado}-${nr_unico}${suffix}`;
+    return newFileName;
+}
+
 function saveLabels() {
     if (imageFiles.length === 0 && currentImage === '') {
-        alert("¡No hay imágenes para guardar etiquetas!");
+        showErrorMessage("¡No hay imágenes para guardar etiquetas!");
         return;
     }
 
@@ -734,38 +755,23 @@ function Save_Cancel() {
 }
 
 function Save_Confirm() {
-    const fabricante = document.getElementById('fabricante').value.trim();
-    const date_prod = document.getElementById('date_prod').value.trim().split('-').join('');
-    const date_control = document.getElementById('date_control').value.trim().split('-').join('');
-    const rolado = document.getElementById('rolado').value.trim();
-    const seccion = document.getElementById('seccion').value.trim();
+    const newFileName = saveCheck(false);
+    if (!newFileName) return;
+
     const nr_unico = document.getElementById('nr_unico').value.trim();
-    const torcedor = document.getElementById('torcedor').value.trim();
-    
-    if (!fabricante||!date_prod || !date_control || !rolado || !seccion || !nr_unico || !torcedor) {
-        alert("Por favor, completa todos los campos.");
-        return;
-    }
 
-    console.log("Valor de fabricante:", fabricante);
-
-    const newFileName = `${fabricante}-${date_prod}-${seccion}-${rolado}-${nr_unico}-${labels.length}.jpg`;
-
-    // Validar número único
     fetch(`check_unique_number?nr_unico=${encodeURIComponent(nr_unico)}`)
         .then(response => response.json())
         .then(data => {
             if (data.exists) {
-                alert("El número único ya existe. Por favor, ingresa un número único diferente.");
+                showErrorMessage("El número único ya existe. Por favor, ingresa un número único diferente.");
                 $("#save-container").hide("slow");
                 $("#canvas").show("slow");
                 updateButtons4Save(false);
                 return;
             }
 
-            const canvasImage = canvas.toDataURL('image/jpeg');
-
-            fetch("update_labels", {
+            fetch("save_update", {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json',
@@ -774,7 +780,7 @@ function Save_Confirm() {
                     file: newFileName,
                     labels: labels,
                     originalImage: currentImage,
-                    canvas_image: canvasImage,
+                    canvas_image: null,
                     label_file: `labels/${newFileName.split('.').slice(0, -1).join('.')}.txt`
                 })
             })
@@ -782,20 +788,17 @@ function Save_Confirm() {
             .then(data => {
                 if (data.message) {
                     currentImage = newFileName;
-                    
-                    // Actualizar la imagen original con la nueva ubicación en save/
                     if (data.original_image_url) {
                         originalImage.src = data.original_image_url;
                     }
-                    
-                    alert("Datos y nombres de archivo guardados correctamente");
+                    showErrorMessage("Datos y nombres de archivo guardados correctamente");
                 } else {
-                    alert("Error al guardar etiquetas: " + (data.error || "Error desconocido"));
+                    showErrorMessage("Error al guardar etiquetas: " + (data.error || "Error desconocido"));
                 }
             })
             .catch(error => {
                 console.error("Error guardando etiquetas:", error);
-                alert("Error al guardar etiquetas: " + error.message);
+                showErrorMessage("Error al guardar etiquetas: " + error.message);
             })
             .finally(() => {
                 $("#save-container").hide("slow");
@@ -804,27 +807,23 @@ function Save_Confirm() {
                 addMode = false;
                 deleteMode = false;
                 updateButtonStyles();
-                
-                // Eliminar el listener del código de barras
+
                 const barcodeInput = document.getElementById('barcodeInput');
-                if (barcodeInput) {
-                    barcodeInput.removeEventListener('input', updateFields);
-                }
+                if (barcodeInput) barcodeInput.removeEventListener('input', updateFields);
             });
         })
         .catch(error => {
             console.error("Error validando número único:", error);
-            alert("Error validando número único: " + error.message);
+            showErrorMessage("Error validando número único: " + error.message);
             $("#save-container").hide("slow");
             $("#canvas").show("slow");
             updateButtons4Save(false);
         });
 }
 
-// ------------------------- IMPRESIÓN -------------------------
 function printLabel() {
     if (imageFiles.length === 0 && currentImage === '') {
-        alert("¡No hay imágenes para guardar etiquetas!");
+        showErrorMessage("¡No hay imágenes para guardar etiquetas!");
         return;
     }
 
@@ -890,65 +889,84 @@ function Print_Cancel() {
 }
 
 function Print_Confirm() {
-    const fabricante = document.getElementById('fabricante').value.trim();
-    const date_prod = document.getElementById('date_prod').value.trim();
-    const date_control = document.getElementById('date_control').value.trim();
-    const rolado = document.getElementById('rolado').value.trim();
-    const seccion = document.getElementById('seccion').value.trim();
-    const nr_unico = document.getElementById('nr_unico').value.trim();
-    const torcedor = document.getElementById('torcedor').value.trim();
-    
-    if (!fabricante||!date_prod || !date_control || !rolado || !seccion || !nr_unico || !torcedor) {
-        alert("Por favor, completa todos los campos.");
-        return;
-    }
-    
-    window.print();
-    $("#save-container").hide("slow");
-    $("#canvas").show("slow");
-    updateButtons4Print(false);
+    const newFileName = saveCheck(true);
+    if (!newFileName) return;
 
-    // Limpiar el listener del código de barras
-    const barcodeInput = document.getElementById('barcodeInput');
-    if (barcodeInput) {
-        barcodeInput.removeEventListener('input', updateFields);
-    }
+    const canvasImage = canvas.toDataURL('image/jpeg');
+    const nr_unico = document.getElementById('nr_unico').value.trim();
+
+    fetch(`check_unique_number?nr_unico=${encodeURIComponent(nr_unico)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                showErrorMessage("El número único ya existe. Por favor, ingresa un número único diferente.");
+                $("#save-container").hide("slow");
+                $("#canvas").show("slow");
+                updateButtons4Save(false);
+                return;
+            }
+
+            fetch("print_update", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    file: newFileName,
+                    canvas_image: canvasImage
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    currentImage = newFileName;
+                    if (data.original_image_url) {
+                        originalImage.src = data.original_image_url;
+                    }
+                    showErrorMessage("Datos y nombres de archivo guardados correctamente");
+                } else {
+                    showErrorMessage("Error al guardar etiquetas: " + (data.error || "Error desconocido"));
+                }
+            })
+            .catch(error => {
+                console.error("Error guardando etiquetas:", error);
+                showErrorMessage("Error al guardar etiquetas: " + error.message);
+            })
+            .finally(() => {
+                $("#save-container").hide("slow");
+                $("#canvas").show("slow");
+                updateButtons4Save(false);
+                addMode = false;
+                deleteMode = false;
+                updateButtonStyles();
+
+                const barcodeInput = document.getElementById('barcodeInput');
+                if (barcodeInput) barcodeInput.removeEventListener('input', updateFields);
+            });
+        })
+        .catch(error => {
+            console.error("Error validando número único:", error);
+            showErrorMessage("Error validando número único: " + error.message);
+            $("#save-container").hide("slow");
+            $("#canvas").show("slow");
+            updateButtons4Save(false);
+        });
 }
 
 function Print_Save_Confirm() {
-    const fabricante = document.getElementById('fabricante').value.trim();
-    const date_prod = document.getElementById('date_prod').value.trim();
-    const date_control = document.getElementById('date_control').value.trim();
-    const rolado = document.getElementById('rolado').value.trim();
-    const seccion = document.getElementById('seccion').value.trim();
-    const nr_unico = document.getElementById('nr_unico').value.trim();
-    const torcedor = document.getElementById('torcedor').value.trim();
-    
-    if (!fabricante||!date_prod || !date_control || !rolado || !seccion || !nr_unico || !torcedor) {
-        alert("Por favor, completa todos los campos.");
-        return;
-    }
-    
-    // Primero guardamos
+    // First save data and wait for it to complete
     Save_Confirm();
-    // Luego imprimimos
-    window.print();
     
-    $("#save-container").hide("slow");
-    $("#canvas").show("slow");
-    updateButtons4Print(false);
-    
-    // Limpiar el listener del código de barras
-    const barcodeInput = document.getElementById('barcodeInput');
-    if (barcodeInput) {
-        barcodeInput.removeEventListener('input', updateFields);
-    }
+    // Esperar 1 segundo antes de ejecutar Print_Confirm
+    setTimeout(() => {
+        Print_Confirm();
+    }, 1000);
 }
 
 // ------------------------- CONFIGURACIÓN -------------------------
 function toggleSettings() {
     if (labels == null || labels.length === 0) {
-        alert("¡No hay etiquetas para configurar!. Por favor, añade etiquetas primero.");
+        showErrorMessage("¡No hay etiquetas para configurar!. Por favor, añade etiquetas primero.");
         return;
     }
 
@@ -964,7 +982,7 @@ function closeSettings() {
 function applySettings() {
     const newLabelRadius = parseFloat(document.getElementById('labelSize').value); // Use pixel radius directly
     if (isNaN(newLabelRadius) || newLabelRadius <= 0) {
-        alert("Por favor, selecciona un valor válido para el tamaño de las etiquetas.");
+        showErrorMessage("Por favor, selecciona un valor válido para el tamaño de las etiquetas.");
         return;
     }
     labelRadius = newLabelRadius; // Update global labelRadius
@@ -985,14 +1003,15 @@ document.getElementById('labelSize').addEventListener('input', function() {
     document.getElementById('labelSizeValue').textContent = this.value + ' px';
 });
 
-function updateCanvasSize() {
-    const mgridCanvas = document.querySelector('.mgrid_canvas');
-    if (mgridCanvas) {
-        canvas.width = mgridCanvas.offsetWidth;
-        canvas.height = mgridCanvas.offsetHeight;
-    }
+function showErrorMessage(message) {
+    const errorMessageDiv = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+    errorText.textContent = message;
+    errorMessageDiv.style.display = 'block';
 }
 
-window.addEventListener('resize', updateCanvasSize);
-updateCanvasSize();
+function closeErrorMessage() {
+    const errorMessageDiv = document.getElementById('error-message');
+    errorMessageDiv.style.display = 'none';
+}
 
